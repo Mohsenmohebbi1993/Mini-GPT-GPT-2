@@ -27,7 +27,7 @@ class CharTokenizer:
             str: Decoded text string.
         """
         # TODO: Map each integer code back to its corresponding character and combine them
-        raise NotImplementedError("Implement this method")
+        return "".join(chr(token) for token in tokens)
 
 
 class BPETokenizer:
