@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>پایپ‌لاین‌های داده برای Pre-Training</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg: #f7f7fb;
+    --surface: #ffffff;
+    --surface-2: #f1f1f7;
+    --text: #1c1c28;
+    --text-muted: #5a5a6e;
+    --border: #e3e3ee;
+    --accent: #e94560;
+    --accent-soft: #fde9ed;
+    --code-bg: #1a1a2e;
+    --code-text: #eaeaf5;
+    --link: #b5254f;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg: #14141c;
+      --surface: #1b1b26;
+      --surface-2: #22222f;
+      --text: #ecebf3;
+      --text-muted: #a4a3b8;
+      --border: #313144;
+      --accent: #ff5876;
+      --accent-soft: #35202a;
+      --code-bg: #0f0f18;
+      --code-text: #eaeaf5;
+      --link: #ff8aa4;
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Vazirmatn', Tahoma, sans-serif;
+    line-height:1.9;
+    font-size:16px;
+  }
+  .page{
+    max-width:900px;
+    margin:0 auto;
+    padding:48px 32px 96px;
+  }
+  header.hero{
+    text-align:center;
+    margin-bottom:40px;
+  }
+  header.hero .kicker{
+    color:var(--accent);
+    font-weight:700;
+    letter-spacing:.5px;
+    font-size:14px;
+    margin-bottom:10px;
+  }
+  h1{
+    font-size:2rem;
+    font-weight:800;
+    margin:0 0 18px;
+    line-height:1.5;
+  }
+  .quote{
+    background:var(--surface);
+    border-inline-start:4px solid var(--accent);
+    border-radius:10px;
+    padding:18px 22px;
+    color:var(--text-muted);
+    font-size:1.02rem;
+    margin:0 0 24px;
+  }
+  .meta{
+    display:flex;
+    gap:12px;
+    justify-content:center;
+    flex-wrap:wrap;
+    margin-bottom:8px;
+  }
+  .meta span{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:6px 16px;
+    font-size:.9rem;
+    color:var(--text-muted);
+  }
+  .meta b{ color:var(--text); }
+
+  h2{
+    font-size:1.5rem;
+    font-weight:800;
+    margin:48px 0 18px;
+    padding-bottom:10px;
+    border-bottom:2px solid var(--border);
+  }
+  h3{
+    font-size:1.2rem;
+    font-weight:700;
+    margin:32px 0 14px;
+    color:var(--accent);
+  }
+  p{ margin:0 0 16px; color:var(--text); }
+  strong{ font-weight:700; }
+
+  ul, ol{ margin:0 0 16px; padding-inline-start:28px; }
+  li{ margin-bottom:8px; }
+  li > p:last-child{ margin-bottom:0; }
+
+  code{
+    font-family:'SFMono-Regular', Consolas, 'Courier New', monospace;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:5px;
+    padding:1px 6px;
+    font-size:.88em;
+    direction:ltr;
+    unicode-bidi:embed;
+  }
+  pre{
+    background:var(--code-bg);
+    color:var(--code-text);
+    border-radius:12px;
+    padding:18px 20px;
+    overflow-x:auto;
+    direction:ltr;
+    text-align:left;
+    margin:0 0 20px;
+  }
+  pre code{
+    background:none;
+    border:none;
+    padding:0;
+    color:inherit;
+    font-size:.9rem;
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    margin:0 0 24px;
+    background:var(--surface);
+    border-radius:10px;
+    overflow:hidden;
+    box-shadow:0 1px 3px rgba(0,0,0,.06);
+  }
+  caption{ caption-side:top; }
+  th, td{
+    border:1px solid var(--border);
+    padding:10px 14px;
+    text-align:right;
+    font-size:.94rem;
+    vertical-align:top;
+  }
+  th{
+    background:var(--surface-2);
+    font-weight:700;
+  }
+  tr:nth-child(even) td{ background: color-mix(in srgb, var(--surface-2) 40%, transparent); }
+  .table-wrap{ overflow-x:auto; }
+
+  .mermaid-wrap{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:20px;
+    margin:0 0 24px;
+    overflow-x:auto;
+    text-align:center;
+  }
+  .mermaid-wrap svg{ max-width:100%; height:auto; }
+
+  .katex-display{ overflow-x:auto; overflow-y:hidden; padding:8px 0; }
+
+  .figure-note{
+    background:var(--accent-soft);
+    border:1px dashed var(--accent);
+    border-radius:10px;
+    padding:14px 18px;
+    color:var(--text-muted);
+    font-size:.9rem;
+    text-align:center;
+    margin:0 0 24px;
+  }
+
+  a{ color:var(--link); }
+
+  hr{
+    border:none;
+    border-top:1px solid var(--border);
+    margin:40px 0;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <div class="kicker">Pre-Training Data Pipelines</div>
+    <h1>پایپ‌لاین‌های داده برای Pre-Training</h1>
+    <div class="meta">
+      <span><b>نوع پروژه:</b> ساخت (Build)</span>
+      <span><b>زبان برنامه‌نویسی:</b> Python</span>
+    </div>
+  </header>
+
+  <div class="quote">
+    مدل مانند یک آینه است: هر داده‌ای که در اختیارش قرار دهید، همان را بازتاب می‌دهد. اگر ورودی آن داده‌های بی‌کیفیت باشد، همان داده‌های بی‌کیفیت را با بیانی کاملاً روان بازتولید خواهد کرد.
+  </div>
+
+  <h2>اهداف یادگیری</h2>
+  <p>پس از مطالعه و اجرای این بخش، باید بتوانید:</p>
+  <ul>
+    <li>یک <code>streaming data pipeline</code> بسازید که چندین ترابایت متن را بدون بارگذاری کامل در حافظه، <code>tokenize</code>، قطعه‌بندی (<code>chunk</code>)، درهم‌ریزی (<code>shuffle</code>) و دسته‌بندی (<code>batch</code>) کند.</li>
+    <li>فیلترهای کیفیت داده مانند حذف داده‌های تکراری (<code>deduplication</code>)، تشخیص زبان (<code>language detection</code>) و پالایش محتوا (<code>content filtering</code>) را، مشابه پایپ‌لاین‌های واقعی Pre-Training، پیاده‌سازی کنید.</li>
+    <li>دنباله‌های آموزشی با طول ثابت بسازید و برای آن‌ها <code>attention mask</code> مناسب و مدیریت صحیح مرز میان سندها (<code>document boundaries</code>) را در نظر بگیرید.</li>
+    <li>توان عملیاتی پایپ‌لاین (<code>pipeline throughput</code>) را اندازه‌گیری و پروفایل کنید تا مطمئن شوید <code>DataLoader</code> می‌تواند داده‌ها را هم‌سرعت با آموزش روی GPU آماده کند و پردازنده‌های گرافیکی منتظر دسته بعدی داده نمانند.</li>
+  </ul>
+
+  <h2>مسئله چیست؟</h2>
+  <p>شما یک <code>tokenizer</code> دارید؛ اکنون به داده نیاز دارید.</p>
+  <p>منظور یک <code>dataset</code> کوچک یا یک فایل CSV نیست. برای آموزش یک مدل زبانی بزرگ، به چندین ترابایت متن نیاز دارید که پاک‌سازی، حذف داده‌های تکراری، ارزیابی و فیلتر کیفیت شده باشد؛ سپس باید متن‌ها به <code>token</code> تبدیل شوند، در دنباله‌هایی با طول ثابت قرار گیرند و با سرعتی کافی در قالب دسته‌های تصادفی به مدل تحویل داده شوند. سرعت پایپ‌لاین باید به‌اندازه‌ای باشد که خوشه هشت‌گرافیکی شما هیچ‌گاه برای دریافت <code>batch</code> بعدی منتظر نماند.</p>
+  <p>بسیاری تصور می‌کنند آموزش یک LLM عمدتاً به معماری مدل وابسته است، اما داده نقشی تعیین‌کننده دارد. Llama 3 با ۱۵٫۶ تریلیون <code>token</code>، مدل GPT-3 با ۳۰۰ میلیارد <code>token</code> و DeepSeek-V2 با ۸٫۱ تریلیون <code>token</code> آموزش دیده‌اند. معماری کلی هر سه نیز کم‌وبیش مشابه است: چندین بلوک Transformer روی هم قرار گرفته‌اند که شامل لایه‌های <code>attention</code> و <code>feedforward</code> هستند. بخش بزرگی از تفاوت کیفیت خروجی این مدل‌ها از حجم، ترکیب و کیفیت داده آموزشی ناشی می‌شود.</p>
+  <p>مقاله Chinchilla از DeepMind این موضوع را دقیق‌تر بیان کرد. برای هر بودجه محاسباتی مشخص، نسبت بهینه‌ای میان تعداد پارامترهای مدل و تعداد <code>token</code>های آموزشی وجود دارد. نتیجه این پژوهش نشان داد که بیشتر مدل‌های سال ۲۰۲۲ به‌شدت کمتر از مقدار لازم آموزش دیده بودند (<code>undertrained</code>)؛ یعنی نسبت به مقدار داده‌ای که دیده بودند، پارامترهای بیش از حد زیادی داشتند. برای مثال، یک مدل ۷۰ میلیارد پارامتری که با ۱٫۴ تریلیون <code>token</code> و مطابق نسبت بهینه Chinchilla آموزش دیده بود، از مدل ۲۸۰ میلیارد پارامتری Gopher که تنها ۳۰۰ میلیارد <code>token</code> دیده بود، عملکرد بهتری داشت.</p>
+  <p>بنابراین پایپ‌لاین داده شما مشخص می‌کند که مدل واقعاً زبان، دانش و الگوهای مفید را یاد بگیرد یا صرفاً نویزهای موجود در داده را بازتولید کند.</p>
+
+  <h2>مفهوم اصلی</h2>
+
+  <h3>داده‌ها از کجا می‌آیند؟</h3>
+  <p>هر مدل زبانی بزرگ با ترکیبی از چند منبع داده آموزش داده می‌شود. ترکیب دقیق داده‌ها در بیشتر آزمایشگاه‌ها یک راز تجاری مهم است، اما اطلاعات منتشرشده برای شناخت دسته‌های اصلی کافی است.</p>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>منبع</th><th>اندازه تقریبی</th><th>کیفیت</th><th>نمونه مدل‌های استفاده‌کننده</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Common Crawl</td><td>حدود ۲۵۰ ترابایت داده خام</td><td>پایین؛ نیازمند فیلتر سنگین</td><td>GPT-3، Llama و بیشتر مدل‌های open-source</td></tr>
+      <tr><td>Wikipedia</td><td>حدود ۲۰ گیگابایت</td><td>بالا</td><td>تقریباً همه LLMهای بزرگ</td></tr>
+      <tr><td>کدهای GitHub</td><td>بیش از ۱ ترابایت</td><td>متوسط؛ شامل کد تکراری و کد مرده فراوان</td><td>StarCoder، CodeLlama و DeepSeek-Coder</td></tr>
+      <tr><td>کتاب‌ها (BookCorpus، Pile)</td><td>حدود ۱۰۰ گیگابایت</td><td>بالا</td><td>GPT-2، GPT-3 و مدل‌های اولیه</td></tr>
+      <tr><td>مقالات علمی (arXiv، S2ORC)</td><td>حدود ۱۰۰ گیگابایت</td><td>بالا، به‌ویژه برای حوزه‌های STEM</td><td>Llama و Galactica</td></tr>
+      <tr><td>StackOverflow و Reddit</td><td>حدود ۱۰۰ گیگابایت</td><td>متوسط</td><td>Llama و Falcon</td></tr>
+      <tr><td>وب پالایش‌شده (C4، RefinedWeb)</td><td>حدود ۵ ترابایت</td><td>متوسط تا بالا؛ از قبل فیلتر شده</td><td>T5 و Falcon</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>طبق اطلاعات منتشرشده درباره ترکیب داده Llama 3، حدود ۵۰٪ داده‌های آن از وب، ۲۵٪ از کد، ۱۳٪ از کتاب‌ها و مقالات علمی، ۸٪ از داده‌های ریاضی و ۴٪ از داده‌های وب چندزبانه تشکیل شده است. مجموع داده آموزشی آن ۱۵٫۶ تریلیون <code>token</code> بوده که از منابعی با بیش از ۵ ترابایت متن خام استخراج شده است.</p>
+  <p>نسبت میان منابع، به‌اندازه حجم کل داده اهمیت دارد. اگر سهم داده وب بیش از حد باشد، مدل ممکن است لحن، سوگیری و الگوهای رایج شبکه‌های اجتماعی را بیش از اندازه یاد بگیرد و به چیزی شبیه «طوطی Reddit» تبدیل شود. اگر سهم کد کم باشد، توان برنامه‌نویسی مدل کاهش می‌یابد؛ اگر داده ریاضی کافی نباشد، عملکرد آن در حل مسئله و استدلال ریاضی ضعیف می‌شود. تعیین ترکیب مناسب یکی از سخت‌ترین بخش‌های آموزش LLM است و فرمول قطعی و جهان‌شمولی ندارد؛ این نسبت باید با آزمایش کنترل‌شده و ارزیابی روی مجموعه‌ای از <code>benchmark</code>ها و وظایف هدف تنظیم شود.</p>
+  <p>نکته مهم دیگر، وزن‌دهی هنگام نمونه‌برداری است. نسبت حضور یک منبع در داده خام لزوماً نباید با نسبت استفاده از آن هنگام آموزش برابر باشد. برای مثال، می‌توان یک منبع کوچک اما باکیفیت را با <code>upsampling</code> بیشتر در معرض مدل قرار داد؛ البته تکرار بیش از حد همان داده نیز خطر <code>memorization</code> و <code>overfitting</code> را افزایش می‌دهد.</p>
+
+  <h3>پاک‌سازی داده (Data Cleaning)</h3>
+  <p>داده خام وب بسیار آلوده و نامنظم است. یک نسخه معمولی از Common Crawl می‌تواند شامل موارد زیر باشد:</p>
+  <ul>
+    <li>تگ‌های HTML و کدهای JavaScript</li>
+    <li>سربرگ، پابرگ، منوهای پیمایش و متن‌های تکراری قالب سایت (boilerplate)</li>
+    <li>صفحه‌های تکراری، هم به‌صورت دقیق (exact duplicate) و هم تقریباً مشابه (near-duplicate)</li>
+    <li>هرزنامه‌های تولیدشده به‌صورت خودکار</li>
+    <li>اطلاعات هویتی قابل شناسایی (PII)</li>
+    <li>متن‌های کم‌کیفیت مانند فهرست کلمات کلیدی و محتوای SEO spam</li>
+    <li>محتوای غیرمتنی که به شکل متن کدگذاری شده است</li>
+  </ul>
+  <p>پاک‌سازی این موارد اختیاری نیست. همین مرحله می‌تواند تفاوت میان مدلی باشد که بندهای منسجم و طبیعی تولید می‌کند و مدلی که تگ‌های HTML را در میان فهرست محصولات و متن‌های تبلیغاتی قرار می‌دهد.</p>
+
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+graph TD
+    A["متن خام (Raw Text)"] --> B["حذف HTML"]
+    B --> C["تشخیص زبان"]
+    C --> D["فیلتر کیفیت"]
+    D --> E["Deduplication"]
+    E --> F["حذف PII"]
+    F --> G["متن پاک‌سازی‌شده"]
+
+    style A fill:#1a1a2e,stroke:#e94560,color:#fff
+    style B fill:#1a1a2e,stroke:#e94560,color:#fff
+    style C fill:#1a1a2e,stroke:#e94560,color:#fff
+    style D fill:#1a1a2e,stroke:#e94560,color:#fff
+    style E fill:#1a1a2e,stroke:#e94560,color:#fff
+    style F fill:#1a1a2e,stroke:#e94560,color:#fff
+    style G fill:#1a1a2e,stroke:#e94560,color:#fff
+    </pre>
+  </div>
+
+  <p>هر مرحله نوع خاصی از نویز را حذف می‌کند:</p>
+  <p><strong>حذف HTML:</strong> تمام نشانه‌گذاری‌ها حذف و فقط متن قابل مشاهده نگه داشته می‌شود. کتابخانه‌هایی مانند <code>trafilatura</code> و <code>readability</code> می‌توانند محتوای اصلی مقاله را استخراج کنند و منوها، تبلیغات و متن‌های تکراری قالب سایت را کنار بگذارند. حذف ساده تگ‌ها همیشه کافی نیست؛ زیرا ممکن است متن منو و پابرگ پس از حذف تگ‌ها همچنان باقی بماند. به همین دلیل استخراج محتوای اصلی معمولاً نتیجه بهتری می‌دهد.</p>
+  <p><strong>تشخیص زبان:</strong> می‌توان از مدل شناسایی زبان fastText با نام <code>lid.176.bin</code> برای طبقه‌بندی هر سند استفاده کرد. سپس فقط زبان‌های هدف نگه داشته می‌شوند. برای نمونه، سندی که با اطمینان کمتر از ۰٫۸ انگلیسی تشخیص داده شده، احتمالاً متن انگلیسی تمیزی نیست؛ ممکن است چندزبانه، بسیار کوتاه یا پر از نویز باشد. آستانه مناسب باید متناسب با زبان و نوع داده تنظیم شود، زیرا سخت‌گیری بیش از حد ممکن است متن‌های معتبر را نیز حذف کند.</p>
+  <p><strong>فیلتر کیفیت:</strong> این مرحله ظرافت بیشتری دارد. RefinedWeb، یعنی مجموعه‌داده‌ای که در آموزش Falcon استفاده شده، از فیلتری مبتنی بر <code>perplexity</code> بهره می‌برد: ابتدا یک مدل زبانی کوچک روی Wikipedia آموزش داده می‌شود و سپس هر سند با آن امتیاز می‌گیرد. <code>perplexity</code> بالا یعنی متن از نظر آماری با نوشته‌های Wikipedia تفاوت زیادی دارد و ممکن است هرزنامه، فهرست کلمات کلیدی یا محتوای تولیدشده به‌صورت ماشینی باشد. اسنادی که امتیاز آن‌ها از آستانه تعیین‌شده بیشتر باشد حذف می‌شوند.</p>
+  <p>بااین‌حال، <code>perplexity</code> بالا همیشه به معنای بی‌کیفیت بودن نیست؛ متن تخصصی، شعر، کد یا زبان‌های کم‌منبع نیز ممکن است امتیاز بالایی بگیرند. بنابراین در یک پایپ‌لاین حرفه‌ای بهتر است این معیار همراه با نشانه‌های دیگری مانند طول سند، نسبت حروف به علائم، تکرار خطوط، فراوانی کلمات نامناسب و امتیاز یک <code>quality classifier</code> استفاده شود.</p>
+  <p><strong>حذف داده‌های تکراری (Deduplication):</strong> این مرحله معمولاً اثرگذارترین بخش پاک‌سازی است. Common Crawl تعداد بسیار زیادی صفحه تکراری دارد؛ از جمله متن‌های حقوقی، پیام‌های مربوط به cookie و شرایط استفاده از خدمات. آموزش روی داده‌های تکراری هم منابع محاسباتی را هدر می‌دهد و هم احتمال حفظ کردن (memorization) و بازتولید کلمه‌به‌کلمه بخش‌های مشخص را افزایش می‌دهد. Deduplication را می‌توان در سطح سند، پاراگراف یا حتی دنباله‌های کوتاه انجام داد.</p>
+  <p><strong>حذف PII:</strong> اطلاعاتی مانند نام افراد، نشانی ایمیل، شماره تلفن و شماره‌های هویتی باید شناسایی و حذف یا ناشناس‌سازی شوند. برای PIIهای ساختاریافته می‌توان از Regular Expression یا Regex استفاده کرد و برای تشخیص نام افراد و موجودیت‌ها در متن از مدل‌های NER کمک گرفت. این مرحله باید با آزمون‌های دقیق همراه باشد؛ زیرا هم باقی‌ماندن اطلاعات حساس و هم حذف اشتباه محتوای سالم می‌تواند مسئله‌ساز شود.</p>
+  <p>ترتیب مراحل نیز اهمیت دارد. برای مثال، حذف HTML پیش از Deduplication باعث می‌شود دو مقاله یکسان که فقط تبلیغات یا قالب متفاوت دارند، راحت‌تر به‌عنوان نسخه‌های مشابه شناسایی شوند.</p>
+
+  <h3>حذف داده‌های تکراری با MinHash</h3>
+  <p>حذف نسخه‌های کاملاً یکسان ساده است: برای هر سند یک <code>hash</code> محاسبه می‌کنیم و سندهایی با <code>hash</code> یکسان را تکراری در نظر می‌گیریم. مسئله اصلی، نسخه‌های تقریباً مشابه است. برای نمونه، دو نسخه از یک خبر ممکن است محتوایی ۹۵٪ یکسان داشته باشند، اما تبلیغات یا چند خط حاشیه‌ای متفاوتی در اطراف متن داشته باشند. بنابراین در سطح byte کاملاً یکسان نیستند و روش hash معمولی آن‌ها را تکراری تشخیص نمی‌دهد.</p>
+  <p>ترکیب MinHash و Locality-Sensitive Hashing (LSH) این مسئله را با هزینه محاسباتی مناسب حل می‌کند.</p>
+
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+graph LR
+    A["سند"] --> B["Shingling"]
+    B --> C["امضای MinHash"]
+    C --> D["باکت‌های LSH"]
+    D --> E["زوج‌های کاندید"]
+    E --> F["Jaccard Similarity"]
+    F --> G["مجموعه بدون تکرار"]
+
+    style A fill:#1a1a2e,stroke:#e94560,color:#fff
+    style B fill:#1a1a2e,stroke:#e94560,color:#fff
+    style C fill:#1a1a2e,stroke:#e94560,color:#fff
+    style D fill:#1a1a2e,stroke:#e94560,color:#fff
+    style E fill:#1a1a2e,stroke:#e94560,color:#fff
+    style F fill:#1a1a2e,stroke:#e94560,color:#fff
+    style G fill:#1a1a2e,stroke:#e94560,color:#fff
+    </pre>
+  </div>
+
+  <p>فرایند به این صورت است:</p>
+  <ol>
+    <li><strong>Shingling:</strong> هر سند به مجموعه‌ای از <code>n-gram</code>ها تبدیل می‌شود؛ برای مثال می‌توان از 5-gram کلمه‌ای یا نویسه‌ای استفاده کرد. عبارت <code>the quick brown fox</code> با shingleهای سه‌کلمه‌ای به مجموعه زیر تبدیل می‌شود:
+      <pre><code>{"the quick brown", "quick brown fox"}</code></pre>
+      استفاده از مجموعه باعث می‌شود حضور یا نبودن هر قطعه مهم باشد، نه تعداد تکرار آن. انتخاب اندازه n نیز یک مصالحه است: مقدار کوچک‌تر شباهت‌های بیشتری پیدا می‌کند اما احتمال false positive را بالا می‌برد؛ مقدار بزرگ‌تر سخت‌گیرانه‌تر است.
+    </li>
+    <li><strong>MinHash:</strong> برای مجموعه shingleهای هر سند، تعداد k مقدار hash محاسبه می‌شود. هر مقدار، کمترین hash مشاهده‌شده میان تمام shingleها تحت یک تابع hash متفاوت است. حاصل، یک «امضا» با طول ثابت است که شباهت Jaccard میان دو سند را تقریب می‌زند. هرچه k بزرگ‌تر باشد، تخمین معمولاً دقیق‌تر اما محاسبه و فضای ذخیره‌سازی بیشتر می‌شود.</li>
+    <li><strong>LSH:</strong> امضای MinHash به چند band تقسیم می‌شود و سندها براساس این بخش‌ها در bucketهای مشترک قرار می‌گیرند. سندهایی که در یک bucket قرار می‌گیرند، کاندید نسخه‌های تقریباً تکراری هستند. این روش نیاز به مقایسه همه زوج‌های ممکن را از بین می‌برد؛ زیرا به‌جای یک الگوریتم تقریباً O(n²)، فقط زوج‌های کاندید بررسی می‌شوند.</li>
+    <li><strong>راستی‌آزمایی (Verify):</strong> برای هر زوج کاندید، مقدار دقیق Jaccard Similarity محاسبه می‌شود:
+      <div>$$J(A,B)=\frac{|A\cap B|}{|A\cup B|}$$</div>
+      اگر شباهت از آستانه تعیین‌شده، معمولاً ۰٫۸، بیشتر باشد، یکی از دو نسخه حذف می‌شود. در انتخاب نسخه‌ای که باید باقی بماند می‌توان کیفیت، تاریخ، طول متن یا اعتبار منبع را نیز در نظر گرفت؛ بنابراین لازم نیست همیشه انتخاب به‌صورت تصادفی انجام شود.
+    </li>
+  </ol>
+  <p>تیم Llama گزارش کرده است که حدود ۳۸٪ از داده وب خود را با Deduplication حذف کرده است. این مقدار ناچیز نیست: بیش از یک‌سوم داده‌های Common Crawl می‌تواند تکراری یا تقریباً تکراری باشد.</p>
+
+  <h3>بسته‌بندی دنباله‌ها (Sequence Packing)</h3>
+  <p>مدل ورودی‌هایی با طول ثابت انتظار دارد، اما طول سندها یکسان نیست. بعضی سندها فقط ۵۰ token و بعضی دیگر ۵۰٬۰۰۰ token دارند.</p>
+  <p>روش ساده و ناکارآمد این است که هر سند را تا حداکثر طول دنباله با padding پر کنیم. در این حالت، بخش بزرگی از محاسبات صرف padding tokenهایی می‌شود که هیچ اطلاعات مفیدی برای یادگیری ندارند.</p>
+  <p>راه بهتر، قرار دادن چند سند در یک دنباله و جداکردن آن‌ها با end-of-sequence token یا [EOS] است. برای مثال، یک دنباله ۲۰۴۸ tokenی می‌تواند سه یا چند سند کوتاه را در خود جای دهد و میان آن‌ها [EOS] قرار بگیرد.</p>
+
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+graph TD
+    subgraph NP["بسته‌بندی ساده و ناکارآمد"]
+        A1["سند A - ۲۰۰ token"] --> P1["PAD × ۱۸۴۸"]
+        A2["سند B - ۵۰۰ token"] --> P2["PAD × ۱۵۴۸"]
+        A3["سند C - ۱۰۰ token"] --> P3["PAD × ۱۹۴۸"]
+    end
+
+    subgraph EP["بسته‌بندی بهینه"]
+        B1["Doc A (200) | Doc B (500) | Doc C (100) | Doc D (400) | Doc E (848)"]
+    end
+
+    style A1 fill:#1a1a2e,stroke:#e94560,color:#fff
+    style A2 fill:#1a1a2e,stroke:#e94560,color:#fff
+    style A3 fill:#1a1a2e,stroke:#e94560,color:#fff
+    style P1 fill:#333,stroke:#666,color:#999
+    style P2 fill:#333,stroke:#666,color:#999
+    style P3 fill:#333,stroke:#666,color:#999
+    style B1 fill:#1a1a2e,stroke:#16c784,color:#fff
+    </pre>
+  </div>
+
+  <p><code>attention mask</code> باید به‌درستی تنظیم شود. در روشی که استقلال اسناد حفظ می‌شود، tokenهای سند A نباید بتوانند به tokenهای سند B در همان دنباله بسته‌بندی‌شده attend کنند. برای این کار از یک block-diagonal attention mask استفاده می‌شود. هر بلوک، ارتباط tokenهای داخل یک سند را مجاز می‌کند و توجه میان دو سند جدا را می‌بندد.</p>
+  <p>البته در برخی پیاده‌سازی‌های causal language modeling، سندها صرفاً با [EOS] از هم جدا می‌شوند و ماسک سراسری causal باقی می‌ماند. این روش ساده‌تر است، اما اجازه می‌دهد tokenهای سند جدید به سند قبلی دسترسی داشته باشند. انتخاب میان این دو روش باید آگاهانه و مطابق هدف آموزش انجام شود؛ اگر جداسازی کامل سندها لازم باشد، [EOS] به‌تنهایی جای block-diagonal attention mask را نمی‌گیرد.</p>
+  <p>سندهای بلند یا بریده می‌شوند (truncate) یا در مرز طول دنباله به چند chunk تقسیم می‌شوند. محل تقسیم مهم است: تقسیم در وسط جمله باعث می‌شود مدل افکار و عبارت‌های ناقص ببیند. به همین دلیل بعضی پایپ‌لاین‌ها، هر زمان ممکن باشد، نقطه برش را با مرز پاراگراف یا جمله هماهنگ می‌کنند. در مقابل، اگر همواره انتهای سند حذف شود، مدل بخش‌های پایانی متن را کمتر می‌بیند؛ تقسیم سند به chunkهای متوالی معمولاً پوشش داده‌ای بهتری ایجاد می‌کند.</p>
+  <p>برای آموزش next-token prediction معمولاً labels همان input_ids با یک جابه‌جایی منطقی هستند. اگر بخش‌هایی مانند [PAD] یا مرزهایی وجود دارند که نباید در محاسبه loss مشارکت کنند، مقدار label آن‌ها معمولاً به ignore_index، برای مثال -100 در بسیاری از پیاده‌سازی‌های PyTorch، تنظیم می‌شود.</p>
+
+  <h3>قانون مقیاس‌پذیری Chinchilla</h3>
+  <p>برای یک بودجه محاسباتی ثابت $C$ که با FLOPs اندازه‌گیری می‌شود، اندازه بهینه مدل $N$ و اندازه بهینه مجموعه‌داده $D$ تقریباً از روابط زیر پیروی می‌کنند:</p>
+  <pre><code>N_opt ~ C^0.5
+D_opt ~ C^0.5</code></pre>
+  <p>در عمل، معنای تقریبی این رابطه آن است که اندازه مدل و اندازه داده باید متناسب با یکدیگر افزایش یابند. مدلی با ۱۰ برابر پارامتر بیشتر، برای رسیدن به loss مشابه در نقطه بهینه محاسباتی، تقریباً به ۱۰ برابر token آموزشی بیشتر نیاز دارد.</p>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>مدل</th><th>تعداد پارامتر</th><th>tokenهای آموزشی</th><th>مطابق نقطه بهینه Chinchilla؟</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>GPT-3</td><td>175B</td><td>300B</td><td>خیر؛ حدود ۳ تا ۴ برابر کمتر از حد لازم آموزش دیده (undertrained)</td></tr>
+      <tr><td>Chinchilla</td><td>70B</td><td>1.4T</td><td>بله؛ مطابق طراحی</td></tr>
+      <tr><td>Llama 2</td><td>70B</td><td>2T</td><td>عمداً بیش از نقطه بهینه آموزش دیده (overtrained)</td></tr>
+      <tr><td>Llama 3</td><td>70B</td><td>15T</td><td>به‌شدت بیش از نقطه بهینه آموزش دیده</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Llama 3 عمداً از نسبت پیشنهادی قانون Chinchilla فراتر رفته است. Meta دریافت که آموزش یک مدل کوچک‌تر با داده بسیار بیشتر از نسبت بهینه محاسباتی، می‌تواند مدلی بهتر و اقتصادی‌تر برای زمان استنتاج (inference) ایجاد کند. هزینه اضافی آموزش فقط یک‌بار پرداخت می‌شود، اما مدل کوچک‌تر در تمام دفعات سرویس‌دهی، حافظه و محاسبات کمتری مصرف می‌کند. از این رو این رویکرد را گاهی مقیاس‌پذیری بهینه برای استنتاج (inference-optimal scaling) می‌نامند و از سال ۲۰۲۴ به بعد به یکی از رویکردهای رایج صنعت تبدیل شده است.</p>
+  <p>نکته ظریف این است که Chinchilla-optimal به معنای بهترین کیفیت مطلق نیست؛ بلکه به معنای بهترین استفاده از یک بودجه آموزش ثابت برای کمینه‌کردن loss است. اگر هزینه استنتاج در طول عمر محصول بسیار بیشتر از هزینه یک‌باره آموزش باشد، صرف محاسبات بیشتر در آموزش یک مدل کوچک‌تر می‌تواند از نظر اقتصادی منطقی‌تر باشد.</p>
+
+  <h2>الزامات عملی پایپ‌لاین</h2>
+  <p>یک پایپ‌لاین واقعی علاوه بر کیفیت محتوا باید از نظر مهندسی نیز پایدار باشد:</p>
+  <ul>
+    <li><strong>پردازش جریانی (Streaming):</strong> فایل‌ها باید به‌صورت تدریجی خوانده شوند تا مصرف حافظه با حجم کل داده رشد نکند.</li>
+    <li><strong>درهم‌ریزی (Shuffle):</strong> اگر داده‌ها براساس منبع یا موضوع مرتب باقی بمانند، دسته‌های متوالی هم‌بستگی زیادی پیدا می‌کنند. برای داده‌های بسیار بزرگ معمولاً از shuffle buffer یا درهم‌ریزی در سطح shard و نمونه استفاده می‌شود.</li>
+    <li><strong>Sharding:</strong> داده باید میان workerها، ماشین‌ها و رتبه‌های مختلف آموزش توزیع شود، بدون اینکه یک نمونه هم‌زمان توسط چند worker خوانده شود یا بخشی از داده نادیده بماند.</li>
+    <li><strong>Prefetch و پردازش موازی:</strong> خواندن دیسک، tokenization و ساخت batch باید با محاسبات GPU هم‌پوشانی داشته باشد. صف‌های خالی در DataLoader معمولاً به معنی هدررفتن زمان گران‌قیمت GPU هستند.</li>
+    <li><strong>تکرارپذیری (Reproducibility):</strong> بذرهای تصادفی، نسخه tokenizer، فهرست shardها و تنظیمات فیلتر باید ثبت شوند تا اجرای آموزشی قابل بازسازی باشد.</li>
+    <li><strong>قابلیت ادامه (Resumability):</strong> در صورت توقف آموزش، پایپ‌لاین باید بتواند از محل معقولی ادامه دهد. ذخیره دقیق وضعیت shuffle buffer ممکن است پرهزینه باشد؛ بنابراین طراحی checkpoint باید میان دقت بازآفرینی و سادگی تعادل برقرار کند.</li>
+  </ul>
+  <p>برای پروفایل عملکرد، فقط زمان کلی را اندازه نگیرید. زمان خواندن داده، پاک‌سازی، tokenization، بسته‌بندی و انتظار برای I/O را جداگانه ثبت کنید. معیارهایی مانند documents/s، tokens/s، زمان آماده‌شدن هر batch، اندازه صف prefetch و درصد زمان بیکاری GPU نشان می‌دهند گلوگاه دقیقاً کجاست. هدف این است که نرخ تولید token پایپ‌لاین با حاشیه‌ای امن از نرخ مصرف خوشه آموزشی بیشتر باشد.</p>
+  <p>در کنار توان عملیاتی، چند آزمون صحت نیز ضروری است: هیچ دنباله‌ای نباید از طول تعیین‌شده عبور کند؛ [EOS] باید در مرز مناسب قرار گیرد؛ attention mask و labels باید با input_ids هم‌اندازه باشند؛ shardهای اختصاص‌یافته به workerها نباید هم‌پوشانی ناخواسته داشته باشند؛ و نمونه‌هایی از خروجی نهایی باید پس از decode به‌صورت دستی بازبینی شوند. سرعت بالا زمانی ارزشمند است که داده صحیح به مدل تحویل داده شود.</p>
+
+  <div class="figure-note">📊 شکل: l5-data-pipeline</div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'default',
+    securityLevel: 'loose'
+  });
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.renderMathInElement) {
+      renderMathInElement(document.body, {
+        delimiters: [
+          {left: "$$", right: "$$", display: true},
+          {left: "$", right: "$", display: false}
+        ]
+      });
+    }
+  });
+</script>
+</body>
+</html>

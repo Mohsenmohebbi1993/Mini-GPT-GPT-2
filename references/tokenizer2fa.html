@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ساخت یک Tokenizer از صفر</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<style>
+  :root{
+    --bg:#faf9f7;
+    --paper:#ffffff;
+    --ink:#232323;
+    --muted:#6b6b6b;
+    --accent:#7a4fd1;
+    --accent-soft:#f1ecfb;
+    --border:#e6e2db;
+    --code-bg:#282a36;
+    --code-ink:#f4f4f4;
+    --table-head:#f4f0ff;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Vazirmatn","Segoe UI",Tahoma,Arial,sans-serif;
+    line-height:1.9;
+  }
+  .wrap{
+    max-width:880px;
+    margin:0 auto;
+    padding:48px 32px 96px;
+  }
+  h1{
+    font-size:2rem;
+    margin:0 0 8px;
+    color:#1a1a1a;
+    border-bottom:3px solid var(--accent);
+    padding-bottom:16px;
+  }
+  h2{
+    font-size:1.5rem;
+    margin:48px 0 16px;
+    color:#1a1a1a;
+    position:relative;
+    padding-inline-start:16px;
+  }
+  h2::before{
+    content:"";
+    position:absolute;
+    inset-inline-start:0;
+    top:0.15em;
+    bottom:0.15em;
+    width:5px;
+    border-radius:3px;
+    background:var(--accent);
+  }
+  h3{
+    font-size:1.2rem;
+    margin:32px 0 12px;
+    color:#2a2a2a;
+  }
+  p{margin:0 0 16px;}
+  .lesson-meta{
+    display:flex;
+    gap:24px;
+    flex-wrap:wrap;
+    margin:16px 0 32px;
+    font-size:0.95rem;
+    color:var(--muted);
+  }
+  .lesson-meta strong{color:var(--ink);}
+  blockquote{
+    margin:20px 0;
+    padding:14px 20px;
+    background:var(--accent-soft);
+    border-inline-start:4px solid var(--accent);
+    border-radius:6px;
+    color:#3d3350;
+  }
+  blockquote p{margin:0;}
+  ul, ol{
+    padding-inline-start:28px;
+    margin:0 0 16px;
+  }
+  li{margin-bottom:8px;}
+  code{
+    font-family:"Fira Code","Cascadia Code",Consolas,monospace;
+    background:#f0eef5;
+    color:#5a3ea0;
+    padding:2px 6px;
+    border-radius:4px;
+    font-size:0.9em;
+    direction:ltr;
+    unicode-bidi:embed;
+  }
+  pre{
+    background:var(--code-bg);
+    color:var(--code-ink);
+    padding:18px 20px;
+    border-radius:10px;
+    overflow-x:auto;
+    margin:20px 0;
+    direction:ltr;
+    text-align:left;
+    font-size:0.88rem;
+    box-shadow:0 4px 14px rgba(0,0,0,0.12);
+  }
+  pre code{
+    background:none;
+    color:inherit;
+    padding:0;
+    font-size:1em;
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    margin:20px 0;
+    background:var(--paper);
+    border-radius:8px;
+    overflow:hidden;
+    box-shadow:0 1px 4px rgba(0,0,0,0.06);
+  }
+  th, td{
+    padding:12px 14px;
+    text-align:right;
+    border-bottom:1px solid var(--border);
+    vertical-align:top;
+    font-size:0.95rem;
+  }
+  th{
+    background:var(--table-head);
+    color:#3d3350;
+    font-weight:700;
+  }
+  tr:last-child td{border-bottom:none;}
+  .mermaid{
+    background:var(--paper);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:24px;
+    margin:24px 0;
+    display:flex;
+    justify-content:center;
+    direction:ltr;
+  }
+  .figure-block{
+    background:#fff8e6;
+    border:1px dashed #d8b34a;
+    border-radius:8px;
+    padding:16px 20px;
+    margin:20px 0;
+    color:#7a5c17;
+    font-family:monospace;
+    direction:ltr;
+    text-align:left;
+  }
+  hr{
+    border:none;
+    border-top:1px solid var(--border);
+    margin:40px 0;
+  }
+  strong{color:#1a1a1a;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>ساخت یک Tokenizer از صفر</h1>
+
+<blockquote><p>در درس ۰۱ یک نمونه ساده و آموزشی ساختید؛ در این درس همان ایده را به ابزاری جدی‌تر، مقاوم‌تر و نزدیک‌تر به نیازهای واقعی تبدیل می‌کنید.</p></blockquote>
+
+<div class="lesson-meta">
+  <span><strong>نوع درس:</strong> ساخت و پیاده‌سازی</span>
+  <span><strong>زبان برنامه‌نویسی:</strong> Python</span>
+</div>
+
+<h2>اهداف یادگیری</h2>
+<p>در پایان این درس باید بتوانید:</p>
+<ul>
+  <li>یک BPE Tokenizer نزدیک به سطح Production بسازید که Unicode، نرمال‌سازی Whitespace و Special Tokenها را به‌درستی مدیریت کند.</li>
+  <li>Byte-level fallback را پیاده‌سازی کنید تا Tokenizer بتواند هر ورودی، از جمله Emoji، متن‌های CJK و Code را بدون تولید Unknown Token رمزگذاری کند.</li>
+  <li>با استفاده از Pre-tokenization regex، متن را پیش از اجرای BPE merge در مرزهای مناسب کلمه، عدد، نشانه‌گذاری و Whitespace تقسیم کنید.</li>
+  <li>یک Tokenizer سفارشی را روی Corpus آموزش دهید و Compression Ratio آن را روی متن‌های چندزبانه با <code>tiktoken</code> مقایسه کنید.</li>
+  <li>جایگاه Chat Template را در تبدیل پیام‌های ساخت‌یافته به Token ID درک کنید.</li>
+  <li>تفاوت میان یک پیاده‌سازی آموزشی Python و یک Tokenizer مناسب Production را از نظر سرعت، صحت و قابلیت بازتولید توضیح دهید.</li>
+</ul>
+
+<h2>مسئله چیست؟</h2>
+<p>BPE Tokenizer درس ۰۱ روی متن انگلیسی کار می‌کرد. حالا همان Tokenizer را با متن ژاپنی، Emoji یا Python Code شامل ترکیبی از Tab و Space آزمایش کنید؛ احتمالاً بخشی از فرایند خراب می‌شود یا خروجی نامناسبی می‌دهد.</p>
+<p>مشکل از خود الگوریتم BPE نیست؛ مشکل این است که پیاده‌سازی هنوز کامل نیست. یک Tokenizer مناسب Production باید:</p>
+<ul>
+  <li>ورودی را در سطح Byte و مستقل از زبان مدیریت کند؛</li>
+  <li>پیش از تقسیم متن، Unicode را طبق یک سیاست مشخص Normalize کند؛</li>
+  <li>Special Tokenهایی داشته باشد که هرگز شکسته یا با Tokenهای دیگر Merge نشوند؛</li>
+  <li>Pre-tokenization را با Subword splitting ترکیب کند؛</li>
+  <li>قابلیت Encode و Decode قابل‌اعتماد و ترجیحاً برگشت‌پذیر داشته باشد؛</li>
+  <li>آن‌قدر سریع باشد که در Training pipeline به Bottleneck تبدیل نشود؛</li>
+  <li>تنظیمات Vocabulary، Merge rule، Normalization و Special Tokenها را به‌صورت Versioned ذخیره کند تا نتیجه قابل بازتولید باشد.</li>
+</ul>
+<p>Vocabulary مدل GPT-2 شامل 50,257 Token است و Llama 3 از Vocabulary با 128,256 Token استفاده می‌کند. برای مدل‌های خانواده GPT-4 نیز معمولاً Tokenizerهایی با Vocabulary در مقیاس حدود 100,000 Token به کار می‌روند؛ بااین‌حال عدد دقیق به مدل و Encoding مورد استفاده وابسته است.</p>
+<p>این اعداد متعلق به نمونه‌های آزمایشی کوچک نیستند. Merge tableهای چنین Vocabularyهایی روی حجم بسیار بزرگی از داده آموزش دیده‌اند. افزون بر خود BPE، اجزایی مانند Normalization، Pre-tokenization، مدیریت Special Token و Chat Template formatting هستند که یک Tokenizer محدود به عبارت <code>hello world</code> را از Tokenizerی مناسب داده‌های گسترده اینترنتی جدا می‌کنند.</p>
+<p>در این درس قرار است همین اجزا و منطق پشت آن‌ها را بسازید و درک کنید.</p>
+
+<h2>مفهوم اصلی</h2>
+<h3>Pipeline کامل</h3>
+<p>یک Tokenizer مناسب Production صرفاً یک الگوریتم نیست؛ بلکه Pipelineای از چند مرحله است که هر مرحله مسئله متفاوتی را حل می‌کند.</p>
+
+<div class="mermaid">
+flowchart LR
+    A["Raw Text"] --> B["Normalize"]
+    B --> C["Pre-Tokenize"]
+    C --> D["BPE Merge"]
+    D --> E["Special Tokens"]
+    E --> F["Token IDs"]
+</div>
+
+<blockquote><p>نمودار بالا ترتیب مفهومی مراحل را نشان می‌دهد. در پیاده‌سازی واقعی، شناسایی Special Tokenها معمولاً باید پیش از Normalization و BPE انجام شود تا متن دقیق آن‌ها تغییر نکند یا شکسته نشود. سپس بخش‌های عادی متن وارد Pipeline می‌شوند و ID ثابت Special Tokenها در جای مناسب قرار می‌گیرد.</p></blockquote>
+
+<table>
+  <thead>
+    <tr><th>مرحله</th><th>کاری که انجام می‌دهد</th><th>دلیل اهمیت</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>Normalize</code></td><td>اجرای Unicode normalization مانند NFKC و در صورت نیاز Lowercase کردن یا حذف Accent</td><td>از ساخته‌شدن Tokenهای متفاوت برای شکل‌های ظاهراً یکسان جلوگیری می‌کند. برای مثال Ligature با کد <code>U+FB01</code> یعنی <code>ﬁ</code> در NFKC به دو Character یعنی <code>fi</code> تبدیل می‌شود.</td></tr>
+    <tr><td><code>Pre-Tokenize</code></td><td>تقسیم متن به Chunkهای کوچک‌تر پیش از اجرای BPE</td><td>مانع ایجاد Mergeهای نامناسب میان مرز کلمه‌ها می‌شود؛ برای مثال بهتر است <code>the cat</code> به Tokenی مانند <code>e c</code> تبدیل نشود.</td></tr>
+    <tr><td><code>BPE Merge</code></td><td>اجرای Merge ruleهای آموخته‌شده روی Byte sequenceها</td><td>بخش اصلی Compression است و Byteهای خام را به Subword tokenهای پرتکرار تبدیل می‌کند.</td></tr>
+    <tr><td><code>Special Tokens</code></td><td>تشخیص و درج Tokenهایی مانند <code>[BOS]</code>، <code>[EOS]</code>، <code>[PAD]</code> و Chat markerها</td><td>این Tokenها ID ثابت دارند و ساختار ورودی را به مدل اعلام می‌کنند؛ آن‌ها نباید در BPE merge شرکت کنند.</td></tr>
+    <tr><td><code>ID Mapping</code></td><td>تبدیل نمایش هر Token به Integer ID</td><td>مدل Neural Network متن را مستقیماً نمی‌بیند؛ ورودی آن دنباله‌ای از Integer IDها است.</td></tr>
+  </tbody>
+</table>
+
+<h3>ملاحظات Normalization</h3>
+<p>Normalization همیشه به معنی «بهترکردن» متن نیست؛ بلکه یک تصمیم طراحی است و باید با هدف مدل هماهنگ باشد.</p>
+<ul>
+  <li><code>NFC</code> شکل‌های Canonical را یکسان می‌کند، اما Compatibility characterها را کمتر تغییر می‌دهد.</li>
+  <li><code>NFKC</code> تغییرات بیشتری انجام می‌دهد و برای کاهش تنوع نوشتاری مفید است، ولی ممکن است تفاوت‌هایی را که در یک Domain مهم‌اند از بین ببرد.</li>
+  <li>Lowercase کردن برای مدل‌های Uncased مناسب است، اما در Code، نام موجودیت‌ها، شناسه‌ها و بعضی زبان‌ها اطلاعات را از بین می‌برد.</li>
+  <li>حذف Accent می‌تواند Vocabulary را کوچک‌تر کند، ولی ممکن است معنای کلمات یا املای درست نام‌ها را تغییر دهد.</li>
+  <li>تغییر Tab، Newline و چند Space به یک Space برای متن عمومی شاید مفید باشد، اما در Python Code یا داده‌های قالب‌بندی‌شده می‌تواند معنا را عوض کند.</li>
+</ul>
+<p>در نتیجه، Normalization باید در زمان Training و Inference دقیقاً یکسان باشد و همراه Tokenizer ذخیره شود.</p>
+
+<h2>Byte-level BPE</h2>
+<p>Tokenizer درس ۰۱ بر مبنای UTF-8 byte کار می‌کرد و این تصمیم درستی بود؛ اما یک نکته مهم باقی می‌ماند: اگر ورودی شامل Byteهایی باشد که به‌تنهایی یک UTF-8 sequence معتبر تشکیل نمی‌دهند، چه اتفاقی می‌افتد؟</p>
+<p>Byte-level BPE با درنظرگرفتن هر مقدار ممکن Byte، یعنی اعداد ۰ تا ۲۵۵، به‌عنوان Token پایه این مشکل را حل می‌کند. بنابراین Base vocabulary دقیقاً ۲۵۶ ورودی دارد. در این روش هر داده‌ای، از متن معمولی گرفته تا Binary data یا متن آسیب‌دیده، قابل Tokenize شدن است و نیازی به <code>[UNK]</code> نخواهد بود.</p>
+<p>GPT-2 از یک ترفند نمایشی نیز استفاده می‌کند: هر Byte را به یک Unicode character قابل نمایش نگاشت می‌کند تا Vocabulary و Mergeها خواناتر و قابل ذخیره‌سازی در قالب متن باشند. برای نمونه، Byte مربوط به Space یعنی <code>0x20</code> در نگاشت GPT-2 با Character <code>Ġ</code> نمایش داده می‌شود. این نگاشت فقط یک نمایش یک‌به‌یک و برگشت‌پذیر است و منطق اصلی BPE به شکل ظاهری Character اهمیت نمی‌دهد.</p>
+<p>قدرت اصلی Byte-level BPE این است که می‌تواند همه زبان‌ها را با یک سازوکار واحد پردازش کند. برای مثال:</p>
+<ul>
+  <li>بسیاری از Characterهای چینی در UTF-8 با ۳ Byte نمایش داده می‌شوند.</li>
+  <li>Characterهای ژاپنی معمولاً چندByteای هستند.</li>
+  <li>عربی، Devanagari و Emoji نیز صرفاً Byte sequenceهای متفاوت‌اند.</li>
+  <li>متن Code، Control characterها و ترکیب زبان‌ها نیز با همان Vocabulary پایه قابل نمایش‌اند.</li>
+</ul>
+<p>BPE الگوهای پرتکرار را در این Byte sequenceها پیدا می‌کند؛ همان‌طور که در ASCII byteهای متن انگلیسی الگو پیدا می‌کند. اگر یک Character یا کلمه در Training corpus پرتکرار باشد، Merge ruleها ممکن است Byteهای آن را به یک Token یا چند Subword token فشرده تبدیل کنند. اگر ناشناخته باشد، همچنان با Tokenهای پایه Byte قابل نمایش است.</p>
+
+<h3>اصل برگشت‌پذیری</h3>
+<p>برای یک Byte-level Tokenizer انتظار می‌رود رابطه زیر برای ورودی‌های معتبر برقرار باشد:</p>
+<pre><code>decoded = tokenizer.decode(tokenizer.encode(text))
+assert decoded == text</code></pre>
+<p>اگر Normalization فعال باشد، ممکن است خروجی Decode با متن Normalize‌شده برابر باشد، نه الزاماً با متن خام اولیه. بنابراین باید قرارداد <code>encode</code> و <code>decode</code> را روشن کنید و Testهایی برای Unicode، Emoji، RTL text، Newline، Tab و ورودی خالی بنویسید.</p>
+
+<h2>Pre-tokenization</h2>
+<p>پیش از آنکه BPE متن را پردازش کند، بهتر است متن به Chunkهای مناسب تقسیم شود. این کار اجازه نمی‌دهد Merge algorithm از مرزهایی عبور کند که شما از نظر زبانی یا ساختاری نامعتبر می‌دانید.</p>
+<p>GPT-2 برای تقسیم متن از Regex زیر استفاده می‌کند:</p>
+<pre><code>'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+</code></pre>
+<p>این Pattern چند نوع قطعه را شناسایی می‌کند:</p>
+<ul>
+  <li>Contractionهای انگلیسی؛ برای مثال <code>don't</code> تقریباً به <code>don</code> و <code>'t</code> تقسیم می‌شود.</li>
+  <li>دنباله Letterها با یک Space اختیاری در ابتدای آن‌ها.</li>
+  <li>دنباله Numberها با Space اختیاری.</li>
+  <li>Punctuation و Symbolهایی که Letter، Number یا Whitespace نیستند.</li>
+  <li>انواع Whitespace، از جمله Whitespace انتهایی.</li>
+</ul>
+<p>Space ابتدایی عمداً به کلمه بعدی متصل می‌ماند. در نتیجه، متن <code>the cat</code> به قطعه‌هایی شبیه <code>the</code> و <code> cat</code> تقسیم می‌شود، نه <code>the</code>، سپس <code> </code> و بعد <code>cat</code>. این تصمیم باعث می‌شود Tokenizer بتواند شکل کلمه در ابتدای متن را از شکل همان کلمه پس از Space متمایز کند.</p>
+
+<blockquote><p>Pattern بالا از قابلیت‌هایی مانند <code>\p{L}</code> استفاده می‌کند که در ماژول داخلی <code>re</code> در Python پشتیبانی کامل ندارند. برای اجرای مستقیم آن معمولاً از Package شخص ثالث <code>regex</code> استفاده می‌شود.</p></blockquote>
+
+<p>نمونه ساده:</p>
+<pre><code>import regex
+
+PATTERN = regex.compile(
+    r"'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+",
+    flags=regex.IGNORECASE,
+)
+
+def pre_tokenize(text: str) -> list[str]:
+    return PATTERN.findall(text)
+
+
+print(pre_tokenize("I don't code in Python 3.11!"))</code></pre>
+<p>در این مثال، نام <code>pre_tokenize</code> و سایر نام‌های فنی انگلیسی باقی مانده‌اند، اما هدف Function روشن است: ایجاد Chunkهایی که BPE هرکدام را مستقل پردازش کند.</p>
+
+<h3>رویکرد SentencePiece</h3>
+<p>SentencePiece به‌جای وابستگی به Tokenization مخصوص یک زبان، متن را به‌صورت مستقیم و Language-independent پردازش می‌کند و معمولاً Space را با نشانه‌ای مانند <code>▁</code> نمایش می‌دهد. بسته به Model و تنظیمات، Normalization و تقسیمات داخلی خودش را نیز دارد؛ بنابراین درست نیست که در همه حالت‌ها آن را صرفاً «یک Byte stream بلند بدون هیچ مرحله مرزبندی» بدانیم.</p>
+<p>مدل‌های مختلف خانواده Llama نیز دقیقاً یک Tokenizer یکسان ندارند. نسخه‌های قدیمی‌تر عمدتاً با SentencePiece شناخته می‌شوند، در حالی که Tokenizer مدل Llama 3 دارای Vocabulary و Pre-tokenization design متفاوتی است. پس هنگام پیاده‌سازی باید Configuration همان مدل هدف را بررسی و بازتولید کنید.</p>
+<p>انتخاب روش Pre-tokenization مهم است:</p>
+<ul>
+  <li>محدودکردن Merge به Chunkها معمولاً Tokenهای قابل‌تفسیرتر و رفتار کنترل‌شده‌تری ایجاد می‌کند.</li>
+  <li>آزادی بیشتر برای Merge ممکن است در بعضی Corpusها Compression بهتری ایجاد کند.</li>
+  <li>Pattern نامناسب برای یک زبان می‌تواند باعث افزایش تعداد Token و هزینه پردازش شود.</li>
+  <li>هر تغییری در Pattern پس از Training، Token IDهای ورودی را تغییر می‌دهد و با مدل آموزش‌دیده ناسازگار است.</li>
+</ul>
+
+<h2>Special Tokenها</h2>
+<p>هر Tokenizer مناسب Production تعدادی Token ID را برای Markerهای ساختاری رزرو می‌کند:</p>
+<table>
+  <thead><tr><th>Token</th><th>کاربرد</th><th>نمونه مدل یا خانواده</th></tr></thead>
+  <tbody>
+    <tr><td><code>[BOS]</code> یا <code>&lt;s&gt;</code></td><td>مشخص‌کردن Beginning of sequence</td><td>Llama و برخی مدل‌های GPT-style</td></tr>
+    <tr><td><code>[EOS]</code> یا <code>&lt;/s&gt;</code></td><td>مشخص‌کردن End of sequence</td><td>بیشتر مدل‌های Generative</td></tr>
+    <tr><td><code>[PAD]</code></td><td>Padding برای هم‌اندازه‌کردن Sequenceهای یک Batch</td><td>BERT و T5 و بسیاری از Pipelineها</td></tr>
+    <tr><td><code>[UNK]</code></td><td>نمایش Token ناشناخته؛ Byte-level BPE معمولاً به آن نیاز ندارد</td><td>BERT و WordPiece</td></tr>
+    <tr><td><code>&lt;|im_start|&gt;</code></td><td>آغاز مرز یک Chat message</td><td>ChatML-style templateها و برخی مدل‌ها مانند Qwen</td></tr>
+    <tr><td><code>&lt;|im_end|&gt;</code></td><td>پایان مرز یک Chat message</td><td>ChatML-style templateها و برخی مدل‌ها مانند Qwen</td></tr>
+    <tr><td><code>&lt;|user|&gt;</code></td><td>Marker مربوط به نوبت User در بعضی Templateها</td><td>برخی مدل‌های Chat</td></tr>
+    <tr><td><code>&lt;|assistant|&gt;</code></td><td>Marker مربوط به نوبت Assistant در بعضی Templateها</td><td>برخی مدل‌های Chat</td></tr>
+  </tbody>
+</table>
+<p>نام و کاربرد دقیق Special Tokenها میان مدل‌ها متفاوت است؛ بنابراین جدول بالا نمونه‌ای مفهومی است و نباید بدون بررسی Configuration مدل هدف استفاده شود.</p>
+<p>Special Tokenها نباید توسط BPE شکسته شوند. Pipeline معمولاً آن‌ها را با Exact match تشخیص می‌دهد، ID ثابتشان را ثبت می‌کند و فقط متن اطرافشان را به شکل عادی Tokenize می‌کند.</p>
+<p>یک API مناسب باید مشخص کند آیا کاربر اجازه دارد Special Token را مستقیماً در متن وارد کند یا نه. برای مثال می‌توان Parameterهایی مانند <code>allowed_special</code> و <code>disallowed_special</code> داشت. این کنترل از آن جهت مهم است که متن غیرقابل‌اعتماد نتواند به‌سادگی Markerهای ساختاری Conversation را جعل کند.</p>
+<p>طرح ساده مدیریت Special Token:</p>
+<pre><code>SPECIAL_TOKENS = {
+    "&lt;|bos|&gt;": 50_000,
+    "&lt;|eos|&gt;": 50_001,
+    "&lt;|pad|&gt;": 50_002,
+}
+
+def encode_special(token: str) -> int:
+    if token not in SPECIAL_TOKENS:
+        raise ValueError(f"Unknown special token: {token}")
+    return SPECIAL_TOKENS[token]</code></pre>
+<p>IDهای بالا صرفاً نمونه‌اند. در یک Tokenizer واقعی، هیچ ID نباید هم‌زمان هم به Token عادی و هم به Special Token اختصاص داده شود.</p>
+
+<h2>Chat Templateها</h2>
+<p>این بخش یکی از رایج‌ترین محل‌های سردرگمی و خطا در پیاده‌سازی Tokenizer است.</p>
+<p>وقتی پیام‌هایی را به یک Chat model ارسال می‌کنید، API معمولاً فهرستی شبیه نمونه زیر دریافت می‌کند:</p>
+<pre><code>[
+  {"role": "system", "content": "You are helpful."},
+  {"role": "user", "content": "Hello"},
+  {"role": "assistant", "content": "Hi there!"}
+]</code></pre>
+<p>مدل این JSON را مستقیماً نمی‌بیند. Chat Template این ساختار را با استفاده از Special Tokenها، Role markerها، Newlineها و قواعد ثابت به یک متن تخت و سپس یک Token sequence تبدیل می‌کند. هر Model family قالب خاص خود را دارد.</p>
+<p>نمونه مفهومی برای Llama 3:</p>
+<pre><code>&lt;|begin_of_text|&gt;&lt;|start_header_id|&gt;system&lt;|end_header_id|&gt;
+
+You are helpful.&lt;|eot_id|&gt;&lt;|start_header_id|&gt;user&lt;|end_header_id|&gt;
+
+Hello&lt;|eot_id|&gt;&lt;|start_header_id|&gt;assistant&lt;|end_header_id|&gt;
+
+Hi there!&lt;|eot_id|&gt;</code></pre>
+<p>نمونه ChatML-style که در متن اصلی با عنوان ChatGPT آمده بود:</p>
+<pre><code>&lt;|im_start|&gt;system
+You are helpful.&lt;|im_end|&gt;
+&lt;|im_start|&gt;user
+Hello&lt;|im_end|&gt;
+&lt;|im_start|&gt;assistant
+Hi there!&lt;|im_end|&gt;</code></pre>
+<p>اگر Template اشتباه باشد، کیفیت خروجی مدل می‌تواند به‌شدت افت کند. مدل در زمان Training یک قالب مشخص دیده است و تغییراتی مانند حذف Newline، جابه‌جایی Marker، استفاده از Special Token اشتباه یا افزودن Space اضافی ممکن است ورودی را از الگوی Training distribution دور کند.</p>
+<p>نکات مهم در پیاده‌سازی:</p>
+<ul>
+  <li>از Chat Template رسمی همان Model checkpoint استفاده کنید.</li>
+  <li>برای آغاز Generation معمولاً باید Assistant header را اضافه کنید، اما نباید پاسخ ساختگی Assistant را به ورودی بیفزایید.</li>
+  <li>مشخص کنید <code>[BOS]</code> و <code>[EOS]</code> را خود Template اضافه می‌کند یا <code>encode</code>؛ اضافه‌شدن دوباره آن‌ها خطاست.</li>
+  <li>Roleهای پشتیبانی‌شده مانند <code>system</code>، <code>user</code>، <code>assistant</code> و <code>tool</code> باید Validate شوند.</li>
+  <li>Template و Tokenizer باید Version هماهنگ داشته باشند.</li>
+  <li>با Golden test، خروجی Token IDها را با Reference implementation مقایسه کنید.</li>
+</ul>
+
+<h2>آموزش BPE روی Corpus</h2>
+<p>برای ساخت Vocabulary سفارشی، ابتدا متن‌های Training corpus را با همان Normalization و Pre-tokenization نهایی پردازش کنید. سپس:</p>
+<ol>
+  <li>هر Chunk را به Byteهای اولیه تبدیل کنید.</li>
+  <li>فراوانی تمام جفت‌های مجاور را محاسبه کنید.</li>
+  <li>پرتکرارترین Pair را انتخاب و Merge کنید.</li>
+  <li>یک Token جدید و Merge rule متناظر بسازید.</li>
+  <li>مراحل ۲ تا ۴ را تا رسیدن به Vocabulary size موردنظر تکرار کنید.</li>
+</ol>
+<p>Pseudo-code ساده:</p>
+<pre><code>def train_bpe(corpus: list[str], vocab_size: int):
+    vocab = initialize_byte_vocab()  # 256 byte tokens
+    sequences = prepare_sequences(corpus)
+    merges = []
+
+    while len(vocab) &lt; vocab_size:
+        pair_counts = count_adjacent_pairs(sequences)
+        if not pair_counts:
+            break
+
+        best_pair = max(pair_counts, key=pair_counts.get)
+        new_token = merge_pair(best_pair)
+        sequences = apply_merge(sequences, best_pair, new_token)
+        vocab.append(new_token)
+        merges.append(best_pair)
+
+    return vocab, merges</code></pre>
+<p>در پیاده‌سازی واقعی باید Frequency هر Chunk را نیز در نظر بگیرید؛ وگرنه تکرار یک کلمه در Corpus به‌درستی روی انتخاب Mergeها اثر نمی‌گذارد. همچنین نتیجه در حالت تساوی Pairها باید Deterministic باشد تا اجرای مجدد Training همان Vocabulary را تولید کند.</p>
+
+<h3>اعمال Mergeها در زمان Encode</h3>
+<p>در زمان Encode نباید دوباره فراوانی Pairها را محاسبه کنید. Merge ruleهای آموزش‌دیده دارای Rank هستند و Rule با Rank بهتر باید زودتر اعمال شود.</p>
+<pre><code>def encode_chunk(byte_tokens: list[bytes], merge_ranks: dict[tuple[bytes, bytes], int]):
+    tokens = byte_tokens[:]
+
+    while len(tokens) &gt; 1:
+        pairs = list(zip(tokens, tokens[1:]))
+        ranked = [(merge_ranks[pair], pair) for pair in pairs if pair in merge_ranks]
+        if not ranked:
+            break
+
+        _, best_pair = min(ranked)
+        tokens = apply_merge(tokens, best_pair, b"".join(best_pair))
+
+    return tokens</code></pre>
+<p>این نسخه برای آموزش مناسب است، اما به علت ساخت دوباره Pairها در هر Loop برای Production بهینه نیست. پیاده‌سازی‌های سریع‌تر از Data structureهای کارآمد، Cache و Code کامپایل‌شده استفاده می‌کنند.</p>
+
+<h2>ارزیابی Tokenizer</h2>
+<p>صرف اینکه یک Tokenizer بدون خطا Encode و Decode می‌کند، به معنی مناسب‌بودن آن نیست. دست‌کم معیارهای زیر را بررسی کنید:</p>
+
+<h3>Compression Ratio</h3>
+<p>یکی از تعریف‌های ساده:</p>
+<pre><code>compression_ratio = number_of_input_bytes / number_of_tokens</code></pre>
+<p>عدد بزرگ‌تر در این تعریف یعنی هر Token به‌طور متوسط Byteهای بیشتری را پوشش می‌دهد. می‌توانید معیار <code>characters_per_token</code> یا برعکس آن یعنی <code>tokens_per_character</code> را هم گزارش کنید، اما تعریف انتخابی باید در تمام مقایسه‌ها ثابت بماند.</p>
+<p>نمونه مقایسه با <code>tiktoken</code>:</p>
+<pre><code>import tiktoken
+
+def compression_ratio(text: str, token_ids: list[int]) -> float:
+    if not token_ids:
+        return 0.0
+    return len(text.encode("utf-8")) / len(token_ids)
+
+
+encoding = tiktoken.get_encoding("cl100k_base")
+reference_ids = encoding.encode(text)
+custom_ids = tokenizer.encode(text)
+
+print("tiktoken:", compression_ratio(text, reference_ids))
+print("custom:", compression_ratio(text, custom_ids))</code></pre>
+<p>مقایسه را فقط روی انگلیسی انجام ندهید. Dataset ارزیابی بهتر است شامل موارد زیر باشد:</p>
+<ul>
+  <li>انگلیسی رسمی و محاوره‌ای؛</li>
+  <li>فارسی و عربی، به‌ویژه متن RTL؛</li>
+  <li>زبان‌های CJK؛</li>
+  <li>Emoji و ترکیب Emoji با Skin tone یا Zero-width joiner؛</li>
+  <li>Python، JavaScript، JSON و Shell code؛</li>
+  <li>URL، Email، Number و تاریخ؛</li>
+  <li>Whitespaceهای خاص، Tab و چند Newline؛</li>
+  <li>متن‌های خارج از Domain اصلی Training.</li>
+</ul>
+
+<h3>معیارهای تکمیلی</h3>
+<ul>
+  <li><strong>Round-trip correctness:</strong> آیا <code>decode(encode(text))</code> مطابق قرارداد است؟</li>
+  <li><strong>Unknown rate:</strong> در Byte-level BPE باید عملاً صفر باشد.</li>
+  <li><strong>Fertility:</strong> هر کلمه به‌طور میانگین به چند Token شکسته می‌شود؟</li>
+  <li><strong>Sequence length distribution:</strong> طول Sequenceها در Percentileهای مختلف چقدر است؟</li>
+  <li><strong>Cross-language fairness:</strong> آیا یک زبان برای محتوای هم‌اندازه چند برابر زبان دیگر Token مصرف می‌کند؟</li>
+  <li><strong>Speed و memory:</strong> Throughput و Peak memory در Encode و Decode چقدر است؟</li>
+  <li><strong>Reference compatibility:</strong> آیا Token IDها و Special Tokenها با مدل هدف دقیقاً هماهنگ‌اند؟</li>
+</ul>
+
+<h2>سرعت</h2>
+<p>Python خالص معمولاً برای Tokenization در مقیاس Production کافی نیست.</p>
+<p><code>tiktoken</code> متعلق به OpenAI با Rust پیاده‌سازی شده و Python binding دارد. کتابخانه Hugging Face <code>tokenizers</code> نیز از Rust استفاده می‌کند و SentencePiece با C++ پیاده‌سازی شده است. بسته به داده، Hardware، Batch size و نحوه Benchmark، این ابزارها می‌توانند ده‌ها برابر سریع‌تر از پیاده‌سازی ساده Python باشند.</p>
+<p>برای درک مقیاس، اگر Tokenize کردن ۱۵ تریلیون Token با سرعت یک میلیون Token در ثانیه انجام شود:</p>
+<pre><code>15,000,000,000,000 / 1,000,000 = 15,000,000 seconds ≈ 174 days</code></pre>
+<p>اگر Throughput به صد میلیون Token در ثانیه برسد:</p>
+<pre><code>15,000,000,000,000 / 100,000,000 = 150,000 seconds ≈ 1.7 days</code></pre>
+<p>این محاسبه فقط برای نشان‌دادن مقیاس است. در عمل، Tokenization می‌تواند به‌صورت موازی و در کنار خواندن، Sharding و ذخیره Dataset انجام شود و سرعت واقعی به کل Data pipeline وابسته است.</p>
+<p>هدف از ساخت Tokenizer با Python، فهم دقیق Algorithm و اجزای Pipeline است. در Production بهتر است از یک پیاده‌سازی کامپایل‌شده استفاده کنید و Python را به Wrapper، Configuration، Training orchestration و Test محدود نگه دارید.</p>
+
+<h2>ساختار پیشنهادی پیاده‌سازی</h2>
+<p>برای جلوگیری از درهم‌آمیختن مسئولیت‌ها، می‌توانید پروژه را به اجزای زیر تقسیم کنید:</p>
+<pre><code>tokenizer/
+├── normalizer.py
+├── pre_tokenizer.py
+├── bpe_trainer.py
+├── bpe_model.py
+├── special_tokens.py
+├── chat_template.py
+├── tokenizer.py
+└── tests/
+    ├── test_round_trip.py
+    ├── test_unicode.py
+    ├── test_special_tokens.py
+    └── test_compatibility.py</code></pre>
+<p>API اصلی می‌تواند ساده بماند:</p>
+<pre><code>class BPETokenizer:
+    def train(self, corpus: list[str], vocab_size: int) -> None:
+        ...
+
+    def encode(self, text: str, add_special_tokens: bool = False) -> list[int]:
+        ...
+
+    def decode(self, token_ids: list[int], skip_special_tokens: bool = False) -> str:
+        ...
+
+    def save(self, path: str) -> None:
+        ...
+
+    @classmethod
+    def load(cls, path: str) -> "BPETokenizer":
+        ...</code></pre>
+<p>در فایل ذخیره‌شده Tokenizer، علاوه بر <code>vocab</code> و <code>merges</code>، نسخه Format، تنظیمات Normalization، Regex مربوط به Pre-tokenization، فهرست Special Tokenها و ID آن‌ها نیز باید ثبت شود.</p>
+
+<h2>خطاهای رایج</h2>
+<ul>
+  <li>استفاده از Normalization متفاوت در Training و Inference.</li>
+  <li>Decode کردن هر Byte token به‌صورت مستقل؛ یک Unicode character ممکن است از چند Byte تشکیل شده باشد و باید پس از بازسازی کل Byte stream Decode شود.</li>
+  <li>شکستن Special Token توسط Regex یا BPE.</li>
+  <li>افزودن دوباره <code>[BOS]</code> یا <code>[EOS]</code> هم در Chat Template و هم در <code>encode</code>.</li>
+  <li>تغییر ترتیب Merge ruleها یا نادیده‌گرفتن Rank آن‌ها.</li>
+  <li>آموزش روی Corpus نامتوازن و ایجاد Tokenization بسیار پرهزینه برای زبان‌های کم‌نماینده.</li>
+  <li>مقایسه Compression Ratio با تعریف‌های متفاوت.</li>
+  <li>اعتماد به Testهای انگلیسی و نادیده‌گرفتن Unicode edge caseها.</li>
+  <li>استفاده از Python loopهای تو در تو روی Dataset بزرگ بدون Profiling.</li>
+</ul>
+
+<h2>جمع‌بندی</h2>
+<p>یک Tokenizer کامل از کنار هم قرارگرفتن چند تصمیم دقیق ساخته می‌شود: Byte-level representation تضمین می‌کند ورودی ناشناخته نداشته باشیم؛ Normalization تنوع نوشتاری را طبق سیاست پروژه کنترل می‌کند؛ Pre-tokenization مرزهای مجاز Merge را تعیین می‌کند؛ BPE الگوهای پرتکرار را به Tokenهای فشرده تبدیل می‌کند؛ Special Tokenها و Chat Template ساختار مورد انتظار مدل را می‌سازند؛ و ID Mapping خروجی نهایی قابل استفاده برای مدل را تولید می‌کند.</p>
+<p>پیاده‌سازی Python برای یادگیری این سازوکار بسیار ارزشمند است، اما Tokenizer مناسب Production علاوه بر صحت Algorithm به سازگاری دقیق با مدل، Versioning، Testهای چندزبانه، امنیت Special Tokenها و Performance بالا نیاز دارد.</p>
+
+<div class="figure-block">figure: weight-tying</div>
+<blockquote><p>بلوک <code>figure</code> بالا عیناً از فایل اصلی حفظ شده است. این بلوک ظاهراً Placeholder مربوط به سامانه تولید محتوای منبع است و بدون Asset یا Renderer مربوط به <code>weight-tying</code> تصویر مستقلی نمایش نمی‌دهد.</p></blockquote>
+
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: "neutral" });
+</script>
+</body>
+</html>

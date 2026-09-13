@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tokenization در LLMها: BPE، WordPiece و SentencePiece</title>
+<style>
+  :root{
+    --bg:#faf8f5;
+    --bg-alt:#ffffff;
+    --ink:#242019;
+    --ink-soft:#5c5648;
+    --accent:#a8582f;
+    --accent-soft:#e8d9c8;
+    --line:#e4dccc;
+    --code-bg:#2b2620;
+    --code-ink:#f3ead9;
+    --chip:#f1e6d3;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Vazirmatn","Segoe UI",Tahoma,"IRANSans",sans-serif;
+    line-height:1.95;
+    font-size:17px;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:56px 32px 120px;}
+
+  header.hero{
+    background:linear-gradient(135deg,#2b2620,#3d3527);
+    color:#f3ead9;
+    border-radius:18px;
+    padding:44px 36px;
+    margin-bottom:40px;
+    position:relative;
+    overflow:hidden;
+  }
+  header.hero::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:radial-gradient(circle at 85% 20%, rgba(168,88,47,.35), transparent 55%);
+  }
+  header.hero h1{
+    margin:0 0 12px;
+    font-size:1.9rem;
+    position:relative;
+    line-height:1.6;
+  }
+  header.hero p{
+    margin:0;
+    color:#d8cdb8;
+    font-size:1.02rem;
+    position:relative;
+  }
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;position:relative;}
+  .badge{
+    background:rgba(255,255,255,.1);
+    border:1px solid rgba(255,255,255,.18);
+    color:#f3ead9;
+    font-size:.82rem;
+    padding:5px 12px;
+    border-radius:999px;
+  }
+
+  nav.toc{
+    background:var(--bg-alt);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:22px 26px;
+    margin-bottom:44px;
+  }
+  nav.toc h2{
+    margin:0 0 12px;
+    font-size:.95rem;
+    letter-spacing:.02em;
+    color:var(--accent);
+    text-transform:uppercase;
+  }
+  nav.toc ol{margin:0;padding-inline-start:22px;columns:2;column-gap:28px;}
+  nav.toc li{margin-bottom:6px;break-inside:avoid;}
+  nav.toc a{color:var(--ink);text-decoration:none;font-size:.95rem;}
+  nav.toc a:hover{color:var(--accent);}
+
+  section{margin-bottom:52px;}
+  h2{
+    font-size:1.5rem;
+    margin:0 0 20px;
+    padding-bottom:12px;
+    border-bottom:2px solid var(--accent-soft);
+    color:#3a2e20;
+  }
+  h3{
+    font-size:1.18rem;
+    margin:32px 0 14px;
+    color:#4a3a26;
+  }
+  p{margin:0 0 16px;color:var(--ink);}
+  strong{color:#3a2e20;}
+
+  ul,ol{margin:0 0 16px;padding-inline-start:26px;}
+  li{margin-bottom:6px;}
+
+  code{
+    font-family:"Fira Code","Courier New",monospace;
+    background:var(--chip);
+    padding:2px 7px;
+    border-radius:5px;
+    font-size:.88em;
+    direction:ltr;
+    display:inline-block;
+  }
+  pre{
+    background:var(--code-bg);
+    color:var(--code-ink);
+    padding:18px 20px;
+    border-radius:12px;
+    overflow-x:auto;
+    direction:ltr;
+    text-align:left;
+    font-family:"Fira Code","Courier New",monospace;
+    font-size:.88rem;
+    line-height:1.7;
+    margin:0 0 18px;
+  }
+  pre code{background:none;padding:0;border-radius:0;font-size:1em;display:block;}
+
+  .flow{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:0;
+    background:var(--bg-alt);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:26px 20px;
+    margin:0 0 20px;
+  }
+  .flow .node{
+    background:var(--accent-soft);
+    border:1px solid #d8bb98;
+    color:#3a2e20;
+    padding:9px 22px;
+    border-radius:9px;
+    font-family:"Fira Code",monospace;
+    font-size:.92rem;
+    direction:ltr;
+  }
+  .flow .arrow{color:var(--accent);font-size:1.3rem;line-height:1;margin:2px 0;}
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    margin:0 0 20px;
+    background:var(--bg-alt);
+    border-radius:10px;
+    overflow:hidden;
+    border:1px solid var(--line);
+  }
+  th,td{
+    padding:11px 16px;
+    text-align:right;
+    border-bottom:1px solid var(--line);
+    font-size:.94rem;
+  }
+  th{
+    background:#3a2e20;
+    color:#f3ead9;
+    font-weight:600;
+  }
+  tr:last-child td{border-bottom:none;}
+  tr:nth-child(even) td{background:#fbf7f0;}
+
+  .callout{
+    background:#fdf3e7;
+    border-inline-start:4px solid var(--accent);
+    padding:16px 20px;
+    border-radius:8px;
+    margin:0 0 20px;
+    font-size:.96rem;
+    color:#4a3a26;
+  }
+  .callout strong{color:var(--accent);}
+
+  .grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:16px;
+    margin-bottom:20px;
+  }
+  .card{
+    background:var(--bg-alt);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:18px 20px;
+  }
+  .card h4{
+    margin:0 0 10px;
+    font-size:.98rem;
+    color:var(--accent);
+  }
+  .card ul{margin:0;padding-inline-start:20px;}
+  .card li{font-size:.92rem;margin-bottom:4px;}
+
+  .step{
+    background:var(--bg-alt);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:18px 22px;
+    margin-bottom:16px;
+  }
+  .step .label{
+    display:inline-block;
+    background:var(--accent);
+    color:#fff;
+    font-size:.78rem;
+    padding:3px 12px;
+    border-radius:999px;
+    margin-bottom:10px;
+  }
+
+  footer{
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:.85rem;
+    padding-top:24px;
+    border-top:1px solid var(--line);
+  }
+
+  @media (max-width:640px){
+    .wrap{padding:32px 18px 90px;}
+    header.hero{padding:30px 22px;}
+    nav.toc ol{columns:1;}
+    .grid2{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>Tokenization در LLMها: BPE، WordPiece و SentencePiece</h1>
+    <p>منطق سه الگوریتم اصلی Tokenization، اجرای دستی BPE روی یک پیکره کوچک، و اثر Vocabulary Size روی هزینه و عملکرد مدل.</p>
+    <div class="badges">
+      <span class="badge">BPE</span>
+      <span class="badge">WordPiece</span>
+      <span class="badge">SentencePiece</span>
+      <span class="badge">Vocabulary Size</span>
+      <span class="badge">tiktoken · sentencepiece</span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <h2>فهرست مطالب</h2>
+    <ol>
+      <li><a href="#goals">اهداف این درس</a></li>
+      <li><a href="#intro">مقدمه</a></li>
+      <li><a href="#what-is-token">Token چیست؟</a></li>
+      <li><a href="#why">چرا Tokenization مهم است؟</a></li>
+      <li><a href="#methods">روش‌های اصلی Tokenization</a></li>
+      <li><a href="#bpe">BPE (Byte Pair Encoding)</a></li>
+      <li><a href="#byte-level">Byte-Level BPE</a></li>
+      <li><a href="#wordpiece">WordPiece</a></li>
+      <li><a href="#sentencepiece">SentencePiece</a></li>
+      <li><a href="#vocab-tradeoff">Vocabulary Size Trade-off</a></li>
+      <li><a href="#multilingual">Multilingual Tokenization</a></li>
+      <li><a href="#summary">جمع‌بندی</a></li>
+    </ol>
+  </nav>
+
+  <section id="goals">
+    <h2>اهداف این درس</h2>
+    <p>پس از مطالعه این متن باید بتوانید:</p>
+    <ul>
+      <li>منطق سه الگوریتم BPE، WordPiece و Unigram را توضیح دهید و تفاوت معیار Merge آن‌ها را بیان کنید.</li>
+      <li>BPE را روی یک پیکره کوچک به صورت دستی اجرا کنید.</li>
+      <li>اثر Vocabulary Size را روی تعداد پارامترهای Embedding و طول Sequence محاسبه کنید.</li>
+      <li>با کتابخانه‌های <code>tiktoken</code> و <code>sentencepiece</code> متن را Tokenize کنید و Token IDها را بررسی کنید.</li>
+    </ul>
+  </section>
+
+  <section id="intro">
+    <h2>مقدمه</h2>
+    <p>مدل‌های زبانی بزرگ (Large Language Models - LLMs) متن را مانند انسان نمی‌خوانند. مدل در نهایت با اعداد کار می‌کند و این تبدیل متن به اعداد توسط Tokenizer انجام می‌شود.</p>
+
+    <div class="flow">
+      <div class="node">Raw Text</div>
+      <div class="arrow">↓</div>
+      <div class="node">Tokenizer</div>
+      <div class="arrow">↓</div>
+      <div class="node">Token IDs</div>
+      <div class="arrow">↓</div>
+      <div class="node">LLM</div>
+    </div>
+
+    <p>یک Tokenizer تعیین می‌کند که متن چگونه به قطعات کوچک‌تر تقسیم شود و هر قطعه چه Token ID‌ای داشته باشد. این تصمیم روی سرعت، هزینه، Context Window و عملکرد مدل اثر مستقیم دارد.</p>
+
+    <div class="callout">
+      مدل شما زبان انگلیسی یا هیچ زبان دیگری را نمی‌خواند؛ فقط عدد می‌خواند. Tokenizer تعیین می‌کند که این اعداد معنا حمل کنند یا آن را هدر بدهند.
+    </div>
+  </section>
+
+  <section id="what-is-token">
+    <h2>Token چیست؟</h2>
+    <p>برای مثال:</p>
+    <pre><code>Hello, world!</code></pre>
+    <p>بعد از Tokenization ممکن است به شکل زیر نمایش داده شود:</p>
+    <pre><code>[15496, 11, 995, 0]</code></pre>
+    <p>مدل زبان به جای متن خام، این اعداد را پردازش می‌کند.</p>
+  </section>
+
+  <section id="why">
+    <h2>چرا Tokenization مهم است؟</h2>
+    <p>Tokenization فقط یک مرحله Preprocessing نیست؛ بخشی از معماری مدل است.</p>
+    <p>Tokenizer نامناسب باعث می‌شود:</p>
+    <ul>
+      <li>تعداد Tokenها افزایش پیدا کند.</li>
+      <li>Context Window سریع‌تر پر شود.</li>
+      <li>هزینه Inference افزایش یابد.</li>
+      <li>مدل در زبان‌های مختلف عملکرد متفاوتی داشته باشد.</li>
+    </ul>
+    <div class="callout">
+      <strong>اثر قابل اندازه‌گیری:</strong> اگر کلمه‌ای مانند <code>unfortunately</code> به جای یک Token به چهار Token تبدیل شود، برای متنی که پر از کلمات چندهجایی است، ظرفیت مؤثر Context Window تا حدود یک‌چهارم کاهش پیدا می‌کند. از طرف دیگر هزینه API بر اساس تعداد Token محاسبه می‌شود و هر Token تولیدشده یک Forward Pass جداگانه لازم دارد. یعنی فشرده‌سازی بهتر مستقیماً به هزینه و سرعت Inference ترجمه می‌شود.
+    </div>
+  </section>
+
+  <section id="methods">
+    <h2>روش‌های اصلی Tokenization</h2>
+    <p>سه رویکرد اصلی:</p>
+    <ol>
+      <li>Word-level Tokenization</li>
+      <li>Character-level Tokenization</li>
+      <li>Subword Tokenization</li>
+    </ol>
+
+    <h3>Word-level Tokenization</h3>
+    <p>در این روش هر کلمه یک Token مستقل است. مثال:</p>
+    <pre><code>"The cat sat"</code></pre>
+    <p>تبدیل می‌شود به:</p>
+    <pre><code>["The", "cat", "sat"]</code></pre>
+    <p>مشکل اصلی این روش، Vocabulary بسیار بزرگ و وجود Unknown Token است. اگر یک کلمه در Vocabulary وجود نداشته باشد:</p>
+    <pre><code>[UNK]</code></pre>
+    <p>استفاده می‌شود.</p>
+    <p>مشکل فقط کلمات نادر نیست. کلمه‌ای مانند <code>tokenization</code> یا نام مدلی مانند <code>GPT-4o</code> هم به همین راحتی ممکن است در Vocabulary نباشد. در زبان‌هایی مانند آلمانی که کلمات مرکب طولانی رایج است، مثلاً <code>Geschwindigkeitsbegrenzung</code> (به معنای «محدودیت سرعت»)، این مشکل شدیدتر هم می‌شود؛ چون این نوع کلمات عملاً بی‌شمارند و نمی‌توان همه را از پیش در Vocabulary جای داد.</p>
+    <p>فقط زبان انگلیسی بیش از یک میلیون صورت کلمه دارد. اگر Code، URL، نمادهای علمی و ده‌ها زبان دیگر را هم اضافه کنیم، عملاً به Vocabulary بی‌نهایت نیاز داریم. برای LLMهای مدرن این محدودیت قابل قبول نیست.</p>
+
+    <h3>Character-level Tokenization</h3>
+    <p>در این روش هر کاراکتر یک Token است. مثال:</p>
+    <pre><code>hello</code></pre>
+    <p>تبدیل می‌شود به:</p>
+    <pre><code>["h","e","l","l","o"]</code></pre>
+
+    <div class="grid2">
+      <div class="card">
+        <h4>مزیت</h4>
+        <ul>
+          <li>Vocabulary کوچک (چند صد کاراکتر)</li>
+          <li>حذف Unknown Token</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>مشکل</h4>
+        <ul>
+          <li>Sequence Length بسیار بزرگ می‌شود؛ جمله‌ای که در سطح کلمه ۱۰ Token است، در سطح کاراکتر حدود ۵۰ Token می‌شود.</li>
+          <li>مدل باید روابط ساده بین کاراکترها را خودش یاد بگیرد؛ بخشی از ظرفیت Attention صرف یادگیری این می‌شود که «t» و «h» و «e» کنار هم یعنی «the».</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Subword Tokenization</h3>
+    <p>Subword Tokenization بین دو روش قبلی تعادل ایجاد می‌کند. کلمات رایج کامل نگه داشته می‌شوند و کلمات نادر به بخش‌های کوچک‌تر تقسیم می‌شوند. مثال:</p>
+    <pre><code>unhappiness</code></pre>
+    <p>ممکن است تبدیل شود به:</p>
+    <pre><code>["un","happi","ness"]</code></pre>
+    <p>با این کار Vocabulary در محدوده قابل مدیریت (حدود ۳۰ تا ۱۲۸ هزار Token) می‌ماند، Sequenceها کوتاه می‌مانند و Unknown Token عملاً حذف می‌شود، چون هر کلمه‌ای را می‌توان از قطعات موجود ساخت.</p>
+    <p>تقریباً تمام LLMهای مدرن از نوعی Subword Tokenization استفاده می‌کنند. سؤال اصلی این است که کدام الگوریتم.</p>
+
+    <h3>مقایسه سه روش روی یک کلمه</h3>
+    <p>تفاوت این سه رویکرد را می‌توان روی یک کلمه واحد، مثلاً <code>unhappiness</code>، به‌وضوح دید:</p>
+    <table>
+      <thead><tr><th>روش</th><th>خروجی</th><th>تعداد Token</th></tr></thead>
+      <tbody>
+        <tr><td>Word-level</td><td><code>['unhappiness']</code> یا <code>[UNK]</code></td><td>۱ (اگر در Vocabulary باشد) وگرنه Unknown</td></tr>
+        <tr><td>Character-level</td><td><code>['u','n','h','a','p','p','i','n','e','s','s']</code></td><td>۱۱</td></tr>
+        <tr><td>Subword (BPE)</td><td><code>['un','happi','ness']</code></td><td>۳</td></tr>
+      </tbody>
+    </table>
+    <p>همین یک مثال نشان می‌دهد چرا Subword Tokenization نقطه تعادل بین دو روش دیگر است: نه مثل Word-level به Unknown Token گرفتار می‌شود، نه مثل Character-level طول Sequence را غیرضروری زیاد می‌کند.</p>
+  </section>
+
+  <section id="bpe">
+    <h2>BPE (Byte Pair Encoding)</h2>
+    <p>BPE ابتدا یک الگوریتم فشرده‌سازی بود که برای Tokenization استفاده شد.</p>
+    <p>ایده اصلی:</p>
+    <ol>
+      <li>با کاراکترهای اولیه شروع کن.</li>
+      <li>Pairهای پرتکرار را پیدا کن.</li>
+      <li>آن‌ها را Merge کن.</li>
+      <li>Token جدید بساز.</li>
+      <li>تا رسیدن به Vocabulary Size هدف ادامه بده.</li>
+    </ol>
+
+    <div class="flow">
+      <div class="node">Characters</div>
+      <div class="arrow">↓</div>
+      <div class="node">Count Adjacent Pairs</div>
+      <div class="arrow">↓</div>
+      <div class="node">Merge Most Frequent Pair</div>
+      <div class="arrow">↓</div>
+      <div class="node">New Token</div>
+    </div>
+
+    <h3>اجرای گام‌به‌گام روی یک پیکره کوچک</h3>
+    <p>پیکره آموزشی با سه کلمه و فراوانی هرکدام:</p>
+    <pre><code>"lower"  x5
+"lowest" x2
+"newest" x6</code></pre>
+
+    <div class="step">
+      <span class="label">گام ۰</span>
+      <p style="margin-bottom:8px;">شروع از کاراکترها:</p>
+      <pre style="margin:0;"><code>l o w e r      (x5)
+l o w e s t    (x2)
+n e w e s t    (x6)</code></pre>
+    </div>
+
+    <div class="step">
+      <span class="label">گام ۱</span>
+      <p style="margin-bottom:8px;">شمارش Pairهای مجاور:</p>
+      <pre style="margin:0 0 12px;"><code>(w,e): 13    (e,s): 8    (s,t): 8    (l,o): 7
+(o,w): 7     (n,e): 6    (e,w): 6    (e,r): 5</code></pre>
+      <p style="margin:0 0 8px;">پرتکرارترین Pair یعنی <code>(w,e)</code> با ۱۳ بار تکرار Merge می‌شود:</p>
+      <pre style="margin:0;"><code>l o we r       (x5)
+l o we s t     (x2)
+n e we s t     (x6)</code></pre>
+    </div>
+
+    <div class="step">
+      <span class="label">گام ۲</span>
+      <p style="margin-bottom:8px;">شمارش دوباره:</p>
+      <pre style="margin:0 0 12px;"><code>(we,s): 8    (s,t): 8    (l,o): 7    (o,we): 7
+(n,e): 6     (e,we): 6   (we,r): 5</code></pre>
+      <p style="margin:0 0 8px;">اینجا <code>(we,s)</code> و <code>(s,t)</code> هر دو ۸ هستند. در حالت تساوی، پیاده‌سازی‌ها معمولاً اولین Pair را انتخاب می‌کنند. با Merge کردن <code>(we,s)</code>:</p>
+      <pre style="margin:0;"><code>l o we r       (x5)
+l o wes t      (x2)
+n e wes t      (x6)</code></pre>
+    </div>
+
+    <div class="step">
+      <span class="label">گام ۳</span>
+      <p style="margin-bottom:8px;">حالا <code>(wes,t)</code> با ۸ تکرار بیشترین است:</p>
+      <pre style="margin:0;"><code>l o we r       (x5)
+l o west       (x2)
+n e west       (x6)</code></pre>
+    </div>
+
+    <div class="step">
+      <span class="label">گام ۴</span>
+      <p style="margin-bottom:8px;"><code>(l,o)</code> با ۷ تکرار:</p>
+      <pre style="margin:0;"><code>lo we r        (x5)
+lo west        (x2)
+n e west       (x6)</code></pre>
+    </div>
+
+    <div class="step">
+      <span class="label">گام ۵</span>
+      <p style="margin-bottom:8px;"><code>(n,e)</code> با ۶ تکرار:</p>
+      <pre style="margin:0;"><code>lo we r        (x5)
+lo west        (x2)
+ne west        (x6)</code></pre>
+    </div>
+
+    <p>این چرخه تا رسیدن به Vocabulary Size هدف ادامه پیدا می‌کند.</p>
+    <p>خروجی آموزش BPE یک Merge Table است که مشخص می‌کند چه Mergeهایی و با چه ترتیبی انجام شوند. همین جدول، خودِ Tokenizer است. برای Encode کردن متن جدید، Mergeها دقیقاً به همان ترتیبی که یاد گرفته شده‌اند اعمال می‌شوند.</p>
+    <div class="callout">
+      <strong>نکته مهم:</strong> پیکره آموزشی تعیین می‌کند چه Mergeهایی وجود داشته باشند و این انتخاب برای همیشه شکل چیزی را که مدل می‌بیند مشخص می‌کند. بعد از آموزش مدل نمی‌توان آن را تغییر داد.
+    </div>
+  </section>
+
+  <section id="byte-level">
+    <h2>Byte-Level BPE</h2>
+    <p>در Byte-Level BPE به جای کاراکتر Unicode، از Byteهای خام شروع می‌کنیم.</p>
+    <p>Vocabulary پایه دقیقاً ۲۵۶ عضو دارد، یعنی تمام مقادیر ممکن یک Byte. هر متنی در هر زبان و هر Encoding‌ای در نهایت دنباله‌ای از همین ۲۵۶ مقدار است، بنابراین Unknown Token از نظر ساختاری غیرممکن می‌شود. Mergeهای BPE روی همین پایه ساخته می‌شوند.</p>
+    <div class="card">
+      <h4>مزایا</h4>
+      <ul>
+        <li>پشتیبانی از تمام زبان‌ها</li>
+        <li>عدم نیاز به Unknown Token</li>
+        <li>مناسب برای متن و Code</li>
+      </ul>
+    </div>
+    <p>این روش را GPT-2 معرفی کرد و خانواده مدل‌های GPT از آن استفاده می‌کنند.</p>
+
+    <table>
+      <thead><tr><th>مدل</th><th>Vocabulary Size</th><th>Encoding</th></tr></thead>
+      <tbody>
+        <tr><td>GPT-2</td><td>۵۰٬۲۵۷</td><td>—</td></tr>
+        <tr><td>GPT-3.5 / GPT-4</td><td>حدود ۱۰۰٬۲۵۶</td><td><code>cl100k_base</code></td></tr>
+        <tr><td>GPT-4o</td><td>۲۰۰٬۰۱۹</td><td><code>o200k_base</code></td></tr>
+      </tbody>
+    </table>
+    <p>کتابخانه <code>tiktoken</code> از OpenAI پیاده‌سازی همین خانواده است.</p>
+  </section>
+
+  <section id="wordpiece">
+    <h2>WordPiece</h2>
+    <p>WordPiece مشابه BPE است اما معیار Merge متفاوت است.</p>
+    <p>BPE صرفاً فراوانی تکرار یک Pair را معیار قرار می‌دهد. WordPiece به جای آن، نسبت زیر را بیشینه می‌کند:</p>
+    <pre><code>BPE:        count(A, B)
+WordPiece:  count(AB) / ( count(A) * count(B) )</code></pre>
+    <p>تفاوت را می‌توان این‌طور بیان کرد: BPE می‌پرسد «کدام Pair بیشتر تکرار شده؟» و WordPiece می‌پرسد «کدام Pair بیشتر از حد انتظارِ تصادفی کنار هم آمده؟» یعنی WordPiece ترکیب‌هایی را ترجیح می‌دهد که هم‌آیندی‌شان غیرمنتظره است، نه صرفاً پرتکرار. نتیجه، Vocabulary‌ای متفاوت با BPE است.</p>
+    <p>WordPiece از علامت <code>##</code> برای نشان دادن ادامه یک Subword استفاده می‌کند. مثال:</p>
+    <pre><code>unhappiness   ->   ["un", "##happi", "##ness"]
+embedding     ->   ["em", "##bed", "##ding"]</code></pre>
+    <p>علامت <code>##</code> یعنی این قطعه ادامه Token قبلی است. BERT از WordPiece با Vocabulary برابر ۳۰٬۵۲۲ Token استفاده می‌کند.</p>
+    <div class="callout">
+      نکته‌ای که باید مراقبش بود: همه مدل‌های خانواده BERT از WordPiece استفاده نمی‌کنند. DistilBERT همان روش WordPiece را دنبال می‌کند، اما Tokenizer مربوط به RoBERTa در واقع BPE است، نه WordPiece. یعنی «شبیه BERT بودن» به معنای «استفاده از WordPiece» نیست.
+    </div>
+  </section>
+
+  <section id="sentencepiece">
+    <h2>SentencePiece</h2>
+    <p>SentencePiece متن را به صورت Raw Unicode Stream پردازش می‌کند و وابسته به فاصله بین کلمات نیست. هیچ مرحله Pre-tokenization و هیچ قاعده وابسته به زبان برای تشخیص مرز کلمات ندارد.</p>
+    <p>به همین دلیل برای زبان‌هایی مانند Chinese، Japanese و Thai که در آن‌ها فاصله مرز کلمه را مشخص نمی‌کند، مناسب است.</p>
+    <p>SentencePiece دو روش اصلی دارد:</p>
+
+    <div class="grid2">
+      <div class="card">
+        <h4>BPE Mode</h4>
+        <p style="margin:0;font-size:.92rem;">همان منطق Merge در BPE را روی Sequence کاراکترها اجرا می‌کند.</p>
+      </div>
+      <div class="card">
+        <h4>Unigram Mode</h4>
+        <p style="margin:0;font-size:.92rem;">با یک Vocabulary بزرگ شروع می‌کند و به‌صورت تکراری Tokenهایی را حذف می‌کند که کمترین اثر را روی احتمال کلی دارند؛ یعنی دقیقاً برعکس BPE: به‌جای Merge کردن، هرس می‌کند.</p>
+      </div>
+    </div>
+
+    <h3>نمونه‌های واقعی</h3>
+    <table>
+      <thead><tr><th>مدل</th><th>روش</th><th>Vocabulary Size</th></tr></thead>
+      <tbody>
+        <tr><td>Llama 2</td><td>SentencePiece (BPE Mode)</td><td>۳۲٬۰۰۰</td></tr>
+        <tr><td>T5</td><td>SentencePiece (Unigram Mode)</td><td>۳۲٬۰۰۰</td></tr>
+        <tr><td>Llama 3</td><td>Byte-level BPE مبتنی بر <code>tiktoken</code></td><td>۱۲۸٬۲۵۶</td></tr>
+      </tbody>
+    </table>
+    <p>دلیل این تغییر مسیر Llama 3 در بخش Multilingual توضیح داده می‌شود.</p>
+  </section>
+
+  <section id="vocab-tradeoff">
+    <h2>Vocabulary Size Trade-off</h2>
+
+    <div class="grid2">
+      <div class="card">
+        <h4>Vocabulary کوچک (مثل ۳۲K — BERT، T5)</h4>
+        <ul>
+          <li>Tokenهای بیشتر</li>
+          <li>Sequence طولانی‌تر</li>
+          <li>Embedding Matrix کوچک‌تر</li>
+          <li>برخورد بهتر با کلمات نادر</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h4>Vocabulary بزرگ (مثل ۱۲۸K به بالا — Llama 3، GPT-4o)</h4>
+        <ul>
+          <li>Tokenهای کمتر</li>
+          <li>Sequence کوتاه‌تر</li>
+          <li>Embedding Matrix بزرگ‌تر</li>
+          <li>سرعت Inference بیشتر</li>
+        </ul>
+      </div>
+    </div>
+
+    <p>این یک تصمیم مهندسی با نتایج قابل محاسبه است.</p>
+    <p>فرض کنید بُعد Embedding برابر ۴٬۰۹۶ باشد. برای Vocabulary صد‌و‌بیست‌و‌هشت هزارتایی، فقط ماتریس Embedding برابر است با:</p>
+    <pre><code>128,000 x 4,096 = 524,288,000  (حدود 524M پارامتر)</code></pre>
+    <p>برای Vocabulary سی‌و‌دو هزارتایی:</p>
+    <pre><code>32,000 x 4,096 = 131,072,000   (حدود 131M پارامتر)</code></pre>
+    <p>یعنی حدود ۴۰۰ میلیون پارامتر اختلاف، صرفاً از انتخاب Tokenizer.</p>
+    <p>در مقابل، Vocabulary بزرگ‌تر متن را بیشتر فشرده می‌کند. پاراگرافی که با Vocabulary سی‌و‌دو هزارتایی حدود ۱۰۰ Token می‌شود، ممکن است با Vocabulary صد‌و‌بیست‌و‌هشت هزارتایی حدود ۷۰ Token شود. این یعنی حدود ۳۰ درصد کاهش تعداد Forward Pass در زمان تولید متن. برای مدلی که میلیون‌ها درخواست را سرویس می‌دهد، این مستقیماً کاهش هزینه محاسباتی است.</p>
+
+    <table>
+      <thead><tr><th>مدل</th><th>Vocabulary Size</th><th>نوع Tokenizer</th><th>میانگین Token به ازای هر کلمه انگلیسی</th></tr></thead>
+      <tbody>
+        <tr><td>BERT</td><td>۳۰٬۵۲۲</td><td>WordPiece</td><td>~۱٫۴</td></tr>
+        <tr><td>GPT-2</td><td>۵۰٬۲۵۷</td><td>Byte-level BPE</td><td>~۱٫۳</td></tr>
+        <tr><td>Llama 2</td><td>۳۲٬۰۰۰</td><td>SentencePiece BPE</td><td>~۱٫۴</td></tr>
+        <tr><td>GPT-4</td><td>حدود ۱۰۰٬۲۵۶</td><td>Byte-level BPE</td><td>~۱٫۲</td></tr>
+        <tr><td>Llama 3</td><td>۱۲۸٬۲۵۶</td><td>Byte-level BPE (tiktoken)</td><td>~۱٫۱</td></tr>
+        <tr><td>GPT-4o</td><td>۲۰۰٬۰۱۹</td><td>Byte-level BPE</td><td>~۱٫۰</td></tr>
+      </tbody>
+    </table>
+    <p>میانگین تعداد Token به ازای هر کلمه انگلیسی هم در همین مسیر از حدود ۱٫۴ در BERT به حدود ۱٫۰ در GPT-4o کاهش پیدا کرده است. روند کلی روشن است: هرچه Vocabulary بزرگ‌تر می‌شود، هر کلمه به Tokenهای کمتری تبدیل می‌شود.</p>
+  </section>
+
+  <section id="multilingual">
+    <h2>Multilingual Tokenization</h2>
+    <p>Tokenizerهایی که عمدتاً روی انگلیسی آموزش دیده‌اند برای زبان‌های دیگر Token بیشتری تولید می‌کنند. برای نمونه متن کره‌ای در Tokenizer مدل GPT-2 به‌طور میانگین حدود ۲ تا ۳ Token به ازای هر کلمه مصرف می‌کند و برای زبان چینی وضعیت می‌تواند بدتر باشد.</p>
+    <p>نتیجه:</p>
+    <ul>
+      <li>مصرف بیشتر Context Window</li>
+      <li>هزینه بیشتر</li>
+      <li>اطلاعات کمتر در همان ظرفیت</li>
+    </ul>
+    <div class="callout">
+      به بیان دقیق‌تر، کاربری که به زبانی غیر از انگلیسی می‌نویسد عملاً Context Window مؤثری در حدود نصف کاربر انگلیسی‌زبان دارد، در حالی که به ازای هر Token همان مبلغ را پرداخت می‌کند.
+    </div>
+    <p>همین موضوع دلیل اصلی تصمیم Llama 3 برای چهار برابر کردن Vocabulary از ۳۲ هزار به ۱۲۸ هزار بود. هرچه Token بیشتری به Scriptهای غیرانگلیسی اختصاص پیدا کند، فشرده‌سازی بین زبان‌ها منصفانه‌تر می‌شود.</p>
+  </section>
+
+  <section id="summary">
+    <h2>جمع‌بندی</h2>
+    <p>Tokenizer یکی از اجزای بنیادی LLM است.</p>
+    <p>انتخاب Tokenizer روی موارد زیر اثر دارد:</p>
+    <ul>
+      <li>کیفیت مدل</li>
+      <li>هزینه استفاده</li>
+      <li>سرعت پردازش</li>
+      <li>پشتیبانی از زبان‌های مختلف</li>
+      <li>عملکرد در Code</li>
+    </ul>
+    <p>روش‌های مدرن مانند BPE، WordPiece و SentencePiece تلاش می‌کنند بهترین تعادل را بین اندازه Vocabulary و تعداد Tokenها ایجاد کنند.</p>
+  </section>
+
+  <footer>Tokenization در LLMها &middot; BPE · WordPiece · SentencePiece</footer>
+
+</div>
+</body>
+</html>

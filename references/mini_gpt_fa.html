@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>پیش‌آموزش یک Mini GPT با ۱۲۴ میلیون پارامتر</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<style>
+:root{--bg:#0f1117;--card:#161923;--fg:#e6e8ef;--muted:#a2a8bd;--acc:#e94560;--acc2:#51cf66;--line:#262b3a;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Vazirmatn,system-ui,sans-serif;line-height:2;font-size:16.5px}
+.wrap{max-width:900px;margin:0 auto;padding:48px 22px 90px}
+h1{font-size:2rem;line-height:1.6;border-bottom:2px solid var(--acc);padding-bottom:.5rem}
+h2{font-size:1.5rem;margin-top:2.6rem;color:#fff;border-right:4px solid var(--acc);padding-right:.6rem}
+h3{font-size:1.2rem;margin-top:2rem;color:#ffd9df}
+blockquote{margin:1.4rem 0;padding:.6rem 1.1rem;background:var(--card);border-right:4px solid var(--acc2);border-radius:8px;color:var(--muted)}
+code{font-family:'JetBrains Mono',monospace;direction:ltr;unicode-bidi:embed;background:#1e2230;padding:.12em .38em;border-radius:5px;font-size:.88em;color:#ffb3c0}
+pre{background:#12151f;border:1px solid var(--line);border-radius:12px;padding:16px;overflow-x:auto;direction:ltr;text-align:left}
+pre code{background:none;padding:0;color:#cfd6e6;line-height:1.75}
+table{width:100%;border-collapse:collapse;margin:1.4rem 0;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.55rem .7rem}
+th{background:#1b2030}
+tr:nth-child(even) td{background:#141824}
+a{color:var(--acc2)}
+ul,ol{padding-right:1.4rem;padding-left:0}
+.mermaid{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin:1.6rem 0;text-align:center;overflow-x:auto}
+hr{border:none;border-top:1px solid var(--line);margin:2.5rem 0}
+</style>
+</head>
+<body><div class="wrap" id="content"></div>
+<script id="md" type="text/markdown">
+# پیش‌آموزش یک Mini GPT با ۱۲۴ میلیون پارامتر
+
+> مدل GPT-2 Small حدود ۱۲۴ میلیون پارامتر دارد و از ۱۲ لایهٔ Transformer، تعداد ۱۲ سرِ Attention و Embeddingهای ۷۶۸بعدی تشکیل شده است. آموزش این مدل از ابتدا روی یک GPU مناسب، بسته به سخت‌افزار، اندازهٔ Dataset و تنظیمات آموزش، می‌تواند چند ساعت یا بیشتر طول بکشد. بیشتر افراد به‌جای این کار از checkpointهای ازپیش‌آموزش‌دیده استفاده می‌کنند؛ اما پیاده‌سازی و آموزش یک نمونه از ابتدا، درک بسیار دقیق‌تری از سازوکار مدلی به شما می‌دهد که محصولات خود را بر پایهٔ آن می‌سازید.
+
+**نوع تمرین:** ساخت و پیاده‌سازی  
+**زبان:** Python با استفاده از NumPy
+
+## اهداف یادگیری
+
+- پیاده‌سازی کامل معماری GPT-2 با حدود ۱۲۴ میلیون پارامتر از ابتدا؛ شامل token embedding، positional embedding، بلوک‌های Transformer و language model head
+- آموزش یک مدل GPT روی یک text corpus با استفاده از مسئلهٔ next-token prediction و تابع خطای cross-entropy
+- پیاده‌سازی تولید متن به روش autoregressive با temperature sampling و فیلترهای top-k و top-p
+- پایش نمودارهای training loss و بررسی اینکه آیا مدل الگوهای منسجم زبانی را یاد گرفته است یا نه
+
+## مسئله
+
+شما می‌دانید Transformer چیست، نمودارهای آن را دیده‌اید، می‌توانید عبارت «Attention Is All You Need» را تکرار کنید و روی تخته جعبه‌هایی با عنوان Multi-Head Attention بکشید.
+
+اما هیچ‌کدام از این موارد به‌تنهایی به این معنا نیست که دقیقاً می‌دانید هنگام تولید متن درون مدل چه اتفاقی می‌افتد.
+
+مدل GPT-2 Small با استفاده از weight tying دارای ۱۲۴٬۴۰۲٬۹۴۴ پارامتر است. مقدار تک‌تک این پارامترها طی اجرای مکرر یک Training Loop تعیین شده است: اجرای forward pass، محاسبهٔ loss، اجرای backward pass و به‌روزرسانی weightها. این مدل ۱۲ بلوک Transformer، در هر بلوک ۱۲ attention head، فضای embedding با ۷۶۸ بُعد و vocabulary شامل ۵۰٬۲۵۷ token دارد. هر بار که مدل یک token تولید می‌کند، پارامترهای مدل در زنجیره‌ای از محاسبات ماتریسی مشارکت می‌کنند؛ زنجیره‌ای که دنباله‌ای از token IDها را دریافت کرده و یک probability distribution برای token بعدی تولید می‌کند.
+
+اگر این فرایند را خودتان پیاده‌سازی نکرده باشید، مدل تا حد زیادی برایتان یک black box باقی می‌ماند. می‌توانید از API استفاده کنید یا مدل را fine-tune کنید، اما هنگامی که مشکلی رخ دهد—مثلاً مدل hallucination داشته باشد، خود را تکرار کند یا دستورها را درست دنبال نکند—مدل ذهنی دقیقی برای تحلیل علت رفتار آن نخواهید داشت.
+
+## مفهوم اصلی
+
+### معماری GPT
+
+GPT یک autoregressive language model است. واژهٔ autoregressive یعنی مدل در هر مرحله یک token تولید می‌کند و تولید آن token به تمام tokenهای پیشین وابسته است. معماری مدل از چند Transformer decoder block تشکیل می‌شود که روی یکدیگر قرار گرفته‌اند.
+
+مسیر کامل محاسبه از token IDها تا احتمال token بعدی به شکل زیر است:
+
+1. token IDها وارد مدل می‌شوند. Shape ورودی برابر `(batch_size, seq_len)` است.
+2. عملیات token embedding lookup انجام می‌شود. هر ID به یک بردار ۷۶۸بعدی نگاشت می‌شود. Shape خروجی برابر `(batch_size, seq_len, 768)` است.
+3. عملیات position embedding lookup انجام می‌شود. هر موقعیت مانند ۰، ۱، ۲ و غیره به یک بردار ۷۶۸بعدی نگاشت می‌شود و Shape خروجی مشابه مرحلهٔ قبل است.
+4. token embedding و position embedding با یکدیگر جمع می‌شوند.
+5. نتیجه از ۱۲ Transformer block عبور می‌کند.
+6. یک final LayerNorm اعمال می‌شود.
+7. با یک linear projection، بُعد embedding به اندازهٔ vocabulary تبدیل می‌شود. Shape خروجی برابر `(batch_size, seq_len, vocab_size)` است.
+8. با اعمال softmax، logits به احتمال تبدیل می‌شوند.
+
+این کل ساختار مدل است: نه convolution وجود دارد و نه recurrence. مدل فقط از embedding، Attention، feed-forward network و LayerNorm تشکیل شده است که چندین بار روی هم چیده شده‌اند.
+
+> **نکته:** در زمان آموزش معمولاً تابع `cross_entropy` مستقیماً logits را دریافت می‌کند و softmax را به‌صورت عددی پایدار درون خود انجام می‌دهد. بنابراین پیش از محاسبهٔ loss نباید به‌طور جداگانه softmax را اجرا کرد. softmax بیشتر هنگام inference و sampling برای تبدیل logits به احتمال مورد نیاز است.
+
+```mermaid
+graph TD
+    A["Token IDs\n(batch, seq_len)"] --> B["Token Embeddings\n(batch, seq_len, 768)"]
+    A --> C["Position Embeddings\n(batch, seq_len, 768)"]
+    B --> D["جمع"]
+    C --> D
+    D --> E["Transformer Block 1"]
+    E --> F["Transformer Block 2"]
+    F --> G["..."]
+    G --> H["Transformer Block 12"]
+    H --> I["LayerNorm"]
+    I --> J["Linear Head\n(768 → 50257)"]
+    J --> K["Softmax\nاحتمال token بعدی"]
+
+    style A fill:#1a1a2e,stroke:#e94560,color:#fff
+    style B fill:#1a1a2e,stroke:#0f3460,color:#fff
+    style C fill:#1a1a2e,stroke:#0f3460,color:#fff
+    style D fill:#1a1a2e,stroke:#16213e,color:#fff
+    style E fill:#1a1a2e,stroke:#e94560,color:#fff
+    style F fill:#1a1a2e,stroke:#e94560,color:#fff
+    style H fill:#1a1a2e,stroke:#e94560,color:#fff
+    style I fill:#1a1a2e,stroke:#16213e,color:#fff
+    style J fill:#1a1a2e,stroke:#0f3460,color:#fff
+    style K fill:#1a1a2e,stroke:#51cf66,color:#fff
+```
+
+### بلوک Transformer
+
+هر یک از ۱۲ بلوک الگوی یکسانی دارد. GPT-2 از معماری pre-norm استفاده می‌کند، نه معماری post-norm موجود در Transformer اصلی:
+
+1. اجرای LayerNorm
+2. اجرای Multi-Head Self-Attention
+3. ایجاد residual connection با افزودن ورودی بلوک به خروجی Attention
+4. اجرای LayerNorm دوم
+5. اجرای Feed-Forward Network یا MLP
+6. ایجاد residual connection دوم با افزودن ورودی این زیرلایه به خروجی MLP
+
+اگر ورودی بلوک را با `x` نشان دهیم، محاسبهٔ آن را می‌توان به‌صورت فشرده چنین نوشت:
+
+```python
+x = x + attention(layer_norm_1(x))
+x = x + mlp(layer_norm_2(x))
+```
+
+residual connectionها بسیار مهم‌اند. این مسیرهای میان‌بُر انتقال اطلاعات و gradient را در شبکه‌های عمیق آسان‌تر می‌کنند و باعث می‌شوند آموزش تعداد زیادی بلوک پایدارتر شود. بدون آن‌ها، آموزش شبکه‌های عمیق بسیار دشوارتر است و احتمال بروز vanishing gradient یا افت کیفیت بهینه‌سازی افزایش می‌یابد. همین سازوکار امکان استفاده از ۱۲، ۳۲ یا تعداد بیشتری بلوک را فراهم می‌کند.
+
+### Attention: سازوکار مرکزی مدل
+
+Self-Attention به هر token اجازه می‌دهد tokenهای قبلی را بررسی کند و بیاموزد که به هرکدام چه میزان توجه داشته باشد. محاسبات اصلی آن به شکل زیر است.
+
+برای هر موقعیت از دنباله، سه بردار از ورودی ساخته می‌شود:
+
+- **Query (Q):** «به‌دنبال چه اطلاعاتی هستم؟»
+- **Key (K):** «چه ویژگی یا نشانه‌ای برای تطبیق دارم؟»
+- **Value (V):** «در صورت انتخاب‌شدن، چه اطلاعاتی را منتقل می‌کنم؟»
+
+```text
+Q = input @ W_q    (768 -> 768)
+K = input @ W_k    (768 -> 768)
+V = input @ W_v    (768 -> 768)
+
+attention_scores = Q @ K^T / sqrt(d_k)
+attention_scores = mask(attention_scores)   # causal mask: -inf برای موقعیت‌های آینده
+attention_weights = softmax(attention_scores)
+output = attention_weights @ V
+```
+
+ابتدا شباهت میان Query هر token و Key سایر tokenها با dot product محاسبه می‌شود. سپس causal mask امتیاز موقعیت‌های آینده را با مقدار `-inf` می‌پوشاند. در نتیجه، پس از softmax احتمال توجه به آینده صفر خواهد شد.
+
+causal mask همان عاملی است که GPT را autoregressive می‌کند. برای مثال، موقعیت ۵ می‌تواند به موقعیت‌های ۰ تا ۵ توجه کند، اما اجازه ندارد موقعیت‌های ۶، ۷، ۸ و بعد از آن را ببیند. این محدودیت مانع از آن می‌شود که مدل هنگام آموزش با مشاهدهٔ tokenهای آینده «تقلب» کند.
+
+**Multi-Head Attention** فضای ۷۶۸بعدی را میان ۱۲ head تقسیم می‌کند؛ بنابراین بُعد هر head برابر ۶۴ است. هر head می‌تواند الگوی متفاوتی از Attention را یاد بگیرد. برای مثال، یک head ممکن است رابطه‌های نحوی مانند تطابق فاعل و فعل را دنبال کند؛ head دیگر شباهت معنایی میان واژه‌ها و head دیگری نزدیکی موقعیتی tokenها را بررسی کند. البته این نقش‌ها از پیش برنامه‌ریزی نشده‌اند و در جریان آموزش شکل می‌گیرند. در پایان، خروجی ۱۲ head به هم متصل یا concatenate شده و با یک projection دوباره به فضای ۷۶۸بعدی بازگردانده می‌شود.
+
+```mermaid
+graph LR
+    subgraph MultiHead["Multi-Head Attention؛ تعداد ۱۲ head"]
+        direction TB
+        I["ورودی با بُعد 768"] --> S1["تقسیم به ۱۲ head"]
+        S1 --> H1["Head 1\n64 dims"]
+        S1 --> H2["Head 2\n64 dims"]
+        S1 --> H3["..."]
+        S1 --> H12["Head 12\n64 dims"]
+        H1 --> C["Concat؛ بُعد 768"]
+        H2 --> C
+        H3 --> C
+        H12 --> C
+        C --> O["Output Projection\n768 → 768"]
+    end
+
+    subgraph SingleHead["محاسبات هر head"]
+        direction TB
+        Q["Q = X @ W_q"] --> A["scores = Q @ K^T / 8"]
+        K["K = X @ W_k"] --> A
+        A --> M["اعمال causal mask"]
+        M --> SM["Softmax"]
+        SM --> MUL["weights @ V"]
+        V["V = X @ W_v"] --> MUL
+    end
+
+    style I fill:#1a1a2e,stroke:#e94560,color:#fff
+    style O fill:#1a1a2e,stroke:#e94560,color:#fff
+    style Q fill:#1a1a2e,stroke:#0f3460,color:#fff
+    style K fill:#1a1a2e,stroke:#0f3460,color:#fff
+    style V fill:#1a1a2e,stroke:#0f3460,color:#fff
+```
+
+تقسیم امتیازها بر `sqrt(d_k)` یک scaling ضروری است. در این مثال `sqrt(64) = 8` است. بدون این scaling، مقدار dot product در فضاهای پُربُعد می‌تواند بسیار بزرگ شود و softmax را به نواحی اشباع ببرد؛ نواحی‌ای که gradient در آن‌ها بسیار کوچک است. این ایده یکی از نکات کلیدی مقالهٔ اصلی **Attention Is All You Need** بود.
+
+### KV Cache: چرا inference سریع‌تر می‌شود؟
+
+در زمان آموزش، کل sequence معمولاً به‌صورت هم‌زمان پردازش می‌شود. اما هنگام inference، مدل tokenها را یکی‌یکی تولید می‌کند. اگر هیچ بهینه‌سازی‌ای وجود نداشته باشد، در هر مرحله باید Key و Value مربوط به تمام tokenهای قبلی دوباره محاسبه شود؛ یعنی بخش بزرگی از محاسبات تکراری خواهد بود.
+
+KV Cache این مشکل را کاهش می‌دهد. پس از محاسبهٔ K و V برای هر token، آن‌ها در حافظه ذخیره می‌شوند. هنگام تولید token جدید، فقط Q، K و V مربوط به همان token جدید محاسبه و K و V جدید به cache افزوده می‌شوند؛ سپس Q جدید به تمام Kهای ذخیره‌شده توجه می‌کند. بنابراین محاسبهٔ projectionهای K و V برای گذشته تکرار نمی‌شود.
+
+البته محاسبهٔ attention score برای token جدید همچنان نسبت به طول context رشد می‌کند، زیرا Query جدید باید با Key تمام tokenهای قبلی مقایسه شود. پس KV Cache هزینه را کاملاً ثابت نمی‌کند، بلکه بخش مهمی از محاسبات تکراری را حذف می‌کند؛ در عوض مصرف حافظه افزایش می‌یابد.
+
+برای GPT-2 با ۱۲ لایه، ۱۲ head و بُعد ۶۴ برای هر head، cache برای هر token مقدار زیر را ذخیره می‌کند:
+
+```text
+2 (K + V) × 12 layers × 12 heads × 64 dims = 18,432 values per token
+```
+
+برای sequenceای با طول ۱۰۲۴ و داده‌های FP32، این مقدار تقریباً ۷۵ مگابایت حافظه نیاز دارد. در مدل‌های بسیار بزرگ با تعداد لایه و context length بیشتر، KV Cache یک مصرف‌کنندهٔ اصلی حافظه است. به همین دلیل، inference با context طولانی اغلب memory-bound می‌شود و روش‌هایی مانند کاهش precision، Multi-Query Attention و Grouped-Query Attention اهمیت پیدا می‌کنند.
+
+### Prefill و Decode: دو مرحلهٔ inference
+
+هنگامی که یک prompt برای LLM ارسال می‌کنید، inference در دو مرحلهٔ متفاوت انجام می‌شود.
+
+**Prefill** کل prompt را پردازش می‌کند. چون تمام tokenهای prompt از ابتدا مشخص‌اند، مدل می‌تواند محاسبات موقعیت‌های مختلف را با موازی‌سازی گسترده انجام دهد و KV Cache اولیه را بسازد. این مرحله معمولاً compute-bound است؛ یعنی سرعت آن بیشتر به توان محاسبات ماتریسی GPU وابسته است. زمان دقیق Prefill به مدل، طول prompt، batch size، نوع GPU، precision و نرم‌افزار inference بستگی دارد؛ بنابراین اعداد ثابت را نباید برای همهٔ سامانه‌ها تعمیم داد.
+
+**Decode** مرحله‌ای است که tokenهای خروجی را یکی‌یکی تولید می‌کند. هر token جدید به tokenهای قبلی وابسته است؛ بنابراین تولید مراحل متوالی را نمی‌توان مانند Prefill به‌طور کامل موازی کرد. در بسیاری از LLMهای بزرگ، این مرحله memory-bound است و گلوگاه اصلی آن خواندن weightهای مدل و KV Cache از حافظهٔ GPU است، نه صرفاً انجام عملیات ریاضی.
+
+این تفاوت در سامانه‌های production اهمیت زیادی دارد. throughput مرحلهٔ Prefill معمولاً از توان محاسباتی GPU و کیفیت batching سود می‌برد، درحالی‌که سرعت Decode به‌شدت تحت‌تأثیر memory bandwidth، اندازهٔ مدل، نوع داده و روش مدیریت KV Cache است.
+
+```mermaid
+graph LR
+    subgraph Prefill["مرحلهٔ اول: Prefill"]
+        direction TB
+        P1["prompt کامل\nتمام tokenها مشخص‌اند"]
+        P2["محاسبهٔ موازی\nمعمولاً compute-bound"]
+        P3["ساخت KV Cache"]
+        P1 --> P2 --> P3
+    end
+
+    subgraph Decode["مرحلهٔ دوم: Decode"]
+        direction TB
+        D1["تولید token شمارهٔ N"]
+        D2["خواندن KV Cache\nاغلب memory-bound"]
+        D3["افزودن داده به KV Cache"]
+        D4["تولید token شمارهٔ N+1"]
+        D1 --> D2 --> D3 --> D4
+        D4 -.->|تکرار| D1
+    end
+
+    Prefill --> Decode
+
+    style P1 fill:#1a1a2e,stroke:#51cf66,color:#fff
+    style P2 fill:#1a1a2e,stroke:#51cf66,color:#fff
+    style P3 fill:#1a1a2e,stroke:#51cf66,color:#fff
+    style D1 fill:#1a1a2e,stroke:#e94560,color:#fff
+    style D2 fill:#1a1a2e,stroke:#e94560,color:#fff
+    style D3 fill:#1a1a2e,stroke:#e94560,color:#fff
+    style D4 fill:#1a1a2e,stroke:#e94560,color:#fff
+```
+
+### Training Loop
+
+آموزش یک LLM در این حالت بر پایهٔ next-token prediction انجام می‌شود. اگر ورودی شامل tokenهای `[0, 1, 2, ..., N-1]` باشد، target شامل tokenهای `[1, 2, 3, ..., N]` خواهد بود. به بیان دیگر، ورودی و target یک موقعیت نسبت به یکدیگر shift شده‌اند. تابع loss نیز cross-entropy میان logits پیش‌بینی‌شدهٔ مدل و token واقعی بعدی است.
+
+یک training step شامل مراحل زیر است:
+
+1. **Forward pass:** batch از تمام ۱۲ بلوک عبور می‌کند و برای هر موقعیت، logits یا امتیازهای پیش از softmax تولید می‌شوند.
+2. **Compute loss:** مقدار cross-entropy میان logits و target tokenها محاسبه می‌شود. target همان دنبالهٔ ورودی است که یک موقعیت به جلو shift شده است.
+3. **Backward pass:** با استفاده از backpropagation، gradient تمام پارامترهای قابل‌آموزش محاسبه می‌شود.
+4. **Optimizer step:** optimizer با استفاده از gradientها weightها را به‌روزرسانی می‌کند. خانوادهٔ GPT معمولاً از Adam یا AdamW همراه با learning-rate warmup و یک برنامهٔ decay استفاده می‌کند.
+5. **Clear gradients:** پیش از step بعدی، gradientهای قبلی با عملیاتی مانند `optimizer.zero_grad()` پاک می‌شوند؛ در غیر این صورت frameworkهایی مانند PyTorch آن‌ها را به‌صورت پیش‌فرض انباشته می‌کنند.
+
+یک نمای ساده از این فرایند در PyTorch چنین است:
+
+```python
+optimizer.zero_grad()
+logits = model(input_ids)
+loss = cross_entropy(
+    logits.reshape(-1, vocab_size),
+    target_ids.reshape(-1),
+)
+loss.backward()
+optimizer.step()
+```
+
+learning-rate schedule بیشتر از چیزی که در نگاه اول به نظر می‌رسد اهمیت دارد. در warmup، learning rate طی stepهای ابتدایی از مقداری کوچک به مقدار اوج می‌رسد؛ سپس می‌تواند با الگویی مانند cosine decay کاهش پیدا کند. شروع آموزش با learning rate بیش‌ازحد بزرگ ممکن است سبب ناپایداری یا divergence شود و ثابت نگه‌داشتن مقدار بزرگ آن نیز می‌تواند در مراحل پایانی باعث نوسان و جلوگیری از همگرایی مناسب شود. تعداد stepهای warmup و شکل decay یک hyperparameter است و باید متناسب با اندازهٔ مدل، batch size و تعداد کل stepها انتخاب شود.
+
+### اعداد و ابعاد GPT-2 Small
+
+| مؤلفه | Shape | تعداد پارامترها |
+|---|---:|---:|
+| Token embeddings | `(50257, 768)` | 38,597,376 |
+| Position embeddings | `(1024, 768)` | 786,432 |
+| Attention هر بلوک (`W_q`, `W_k`, `W_v`, `W_out`) | `4 × (768, 768)` | 2,359,296 |
+| FFN هر بلوک؛ up و down همراه bias | `(768, 3072) + (3072, 768) + biases` | 4,722,432 |
+| LayerNormهای هر بلوک؛ تعداد ۲ | `2 × 768 × 2` | 3,072 |
+| Final LayerNorm | `768 × 2` | 1,536 |
+| **مجموع هر بلوک** |  | **7,084,800** |
+| **مجموع ۱۲ بلوک و سایر اجزا** |  | **85,017,600 + 39,383,808 + 1,536 = 124,402,944** |
+
+در این محاسبه، output projection یا logits head وزن خود را با token embedding matrix به اشتراک می‌گذارد. این روش **weight tying** نام دارد. در نتیجه، به‌جای ساخت یک ماتریس مستقل دیگر با حدود ۳۸ میلیون پارامتر، همان ماتریس embedding برای نگاشت representation نهایی به vocabulary استفاده می‌شود.
+
+weight tying علاوه بر کاهش قابل‌توجه تعداد پارامترها، فضای representation ورودی و خروجی را به یکدیگر مرتبط می‌کند: همان بردارهایی که برای نمایش tokenهای ورودی استفاده می‌شوند، در امتیازدهی tokenهای خروجی نیز نقش دارند. در پیاده‌سازی باید مطمئن شوید که دو لایه واقعاً به یک weight مشترک اشاره می‌کنند، نه اینکه فقط در آغاز دارای مقادیر برابر باشند.
+
+</script>
+<script>
+mermaid.initialize({startOnLoad:false,theme:'dark',securityLevel:'loose'});
+const md = document.getElementById('md').textContent;
+const r = new marked.Renderer();
+r.code = (code, lang) => lang === 'mermaid'
+  ? '<div class="mermaid">' + code.replace(/\\n/g,'<br/>') + '</div>'
+  : '<pre><code>' + code.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</code></pre>';
+document.getElementById('content').innerHTML = marked.parse(md,{renderer:r});
+mermaid.run({querySelector:'.mermaid'});
+</script>
+</body></html>
