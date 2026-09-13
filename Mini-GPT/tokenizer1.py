@@ -1,7 +1,7 @@
 from collections import Counter
 from typing import List, Dict, Tuple, Any, Optional
 
-
+# Part 1:---------------------------------------------
 class CharTokenizer:
     """A simple character-level tokenizer mapping ASCII/Unicode characters to integer values."""
 
@@ -15,7 +15,7 @@ class CharTokenizer:
             List[int]: List of character integer codes.
         """
         # TODO: Map each character in the string to its integer character code representation
-        raise NotImplementedError("Implement this method")
+        return [ord(char) for char in text] # Unicode Code Point
 
     def decode(self, tokens: List[int]) -> str:
         """Convert a list of integer character codes back into a string.
