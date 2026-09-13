@@ -29,7 +29,7 @@ class CharTokenizer:
         # TODO: Map each integer code back to its corresponding character and combine them
         return "".join(chr(token) for token in tokens)
 
-
+# Part 2:---------------------------------------------
 class BPETokenizer:
     """Byte-Pair Encoding (BPE) Tokenizer implementation starting from 256 base byte tokens."""
 
@@ -48,7 +48,7 @@ class BPETokenizer:
             Counter: Mapping of (token_a, token_b) tuples to their occurrence counts.
         """
         # TODO: Count frequency of adjacent pairs across the token sequence
-        raise NotImplementedError("Implement this method")
+        return Counter(zip(tokens, tokens[1:]))
 
     def _merge_pair(
         self, tokens: List[int], pair: Tuple[int, int], new_token: int
