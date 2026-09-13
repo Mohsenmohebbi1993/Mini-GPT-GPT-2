@@ -6,7 +6,7 @@ A lightweight, end-to-end implementation of a GPT-style autoregressive language 
 
 ## 📌 Project Overview
 
-This project demonstrates the core engineering and theoretical principles behind modern Large Language Models (LLMs). It covers the full lifecycle of building an LLM without external high-level abstraction libraries (e.g., Hugging Face `transformers`), spanning:
+The objective of this project is to implement and pre-train MiniGPT from scratch using PyTorch. The model architecture closely mirrors GPT-2, scaled down and simplified for educational purposes to provide an in-depth understanding of the internal mechanisms of Large Language Models (LLMs).
 
 1. **Custom Tokenizer Implementation (Byte-level BPE)**
 2. **Pre-Training Data Pipeline Engineering**
@@ -28,6 +28,53 @@ This project demonstrates the core engineering and theoretical principles behind
   - Autoregressive Decoding (Greedy / Top-$k$ / Top-$p$ sampling)
 
 ---
+
+---
+
+## Model Architecture (Decoder-Only Transformer)
+The architecture follows a GPT-2 style Decoder-Only Transformer containing:
+- Token Embedding
+- Positional Embedding
+- Multi-Head Self-Attention
+- Causal Mask
+- Residual Connections
+- Layer Normalization (Pre-LN)
+- Feed-Forward Network (MLP)
+- Final LayerNorm
+- Linear Projection to Vocabulary Space
+- Cross-Entropy Loss
+- Autoregressive Text Generation
+
+---
+
+## Deliberately Simplified Features
+The following features are omitted for educational simplicity:
+- Learning Rate Scheduler
+- Dropout
+- Mixed Precision
+- Flash Attention
+- KV Cache
+- Rotary Position Embedding (RoPE)
+- RMSNorm
+- SwiGLU
+- Parallel Residual
+- Grouped Query Attention (GQA)
+- Large-scale training
+
+---
+
+## Implementation Order & File Structure
+1. `tokenizer1.py` (Mandatory)
+2. `tokenizer2.py` (Mandatory)
+3. `data_pipeline.py` (Mandatory)
+4. `mini_gpt.py` / `torch_gpt_mini.py` (Bonus)
+
+---
+
+## Bonus Grading
+- **Mandatory Tasks:** Completing the first three files (`tokenizer1.py`, `tokenizer2.py`, `data_pipeline.py`).
+- **Bonus 1 (+20%):** Implementing `mini_gpt.py` and successfully overfitting the model on the provided corpus (demonstrating loss reduction and basic autoregressive word generation).
+- **Bonus 2 (+30%):** Integrating the data pipeline built in Step 3 into `mini_gpt.py` using the previously extracted doctor comments dataset.
 
 ## 📁 Repository Structure
 ```text
