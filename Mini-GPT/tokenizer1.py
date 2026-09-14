@@ -64,7 +64,20 @@ class BPETokenizer:
             List[int]: Updated sequence with non-overlapping target pair merged.
         """
         # TODO: Iterate through sequence and substitute target pair occurrences with new token without overlapping
-        raise NotImplementedError("Implement this method")
+        #-----Byte Pair Encoding------
+        # Whenever we see a repeating pattern, we replace it with a new number
+        # EX: [101, 104 ,105, 106, 108, 101, 104] -> [225, 105,106, 107, 225]
+        # [101, 104] repited and change to 225
+        new_tokens = []
+        i = 0
+        while i < len(tokens):
+            if i < len(tokens) - 1 and tokens[i] == pair[0] and tokens[i+1] == pair[1]:
+                new_tokens.append(new_token)
+                i += 2  # jump from token
+            else:
+                new_tokens.append(tokens[i])
+                i += 1  # Add token and go to next
+        return new_tokens
 
     def train(self, text: str, num_merges: int) -> "BPETokenizer":
         """Train BPE vocabulary starting from 256 base bytes and learn merge rules from text.
