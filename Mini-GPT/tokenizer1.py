@@ -95,7 +95,7 @@ class BPETokenizer:
         self.vocab = {i: bytes([i]) for i in range(256)}
         self.merges = {}
 
-        # ۲. تبدیل متن ورودی به لیست اولیه توکن‌ها (بایت‌ها)
+        # 2. Change text to encode
         tokens = list(text.encode("utf-8"))
 
         # Main loop
