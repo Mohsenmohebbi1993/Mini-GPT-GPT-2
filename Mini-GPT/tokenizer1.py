@@ -192,7 +192,14 @@ def compression_ratio(tokenizer: Any, text: str) -> float:
         float: Ratio of encoded token count to raw byte length (0.0 if empty).
     """
     # TODO: Calculate encoded token count relative to raw UTF-8 byte length, returning 0.0 for empty input
-    raise NotImplementedError("Implement this method")
+    byte_length = len(text.encode("utf-8"))
+
+    if byte_length == 0:
+        return 0.0
+
+    token_count = len(tokenizer.encode(text))
+
+    return token_count / byte_length
 
 
 def vocabulary_stats(tokenizer: Any, texts: List[str]) -> None:
