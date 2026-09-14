@@ -90,7 +90,36 @@ class BPETokenizer:
             BPETokenizer: Self instance after training.
         """
         # TODO: Initialize 256 base byte tokens in vocab, compute pair frequencies, and iteratively merge top pair
-        raise NotImplementedError("Implement this method")
+        #--------The core engine of the BPE algorithm (Greedy)---------
+        # base vocablory with 256 byit (0 to 255)
+        self.vocab = {i: bytes([i]) for i in range(256)}
+        self.merges = {}
+
+        # ۲. تبدیل متن ورودی به لیست اولیه توکن‌ها (بایت‌ها)
+        tokens = list(text.encode("utf-8"))
+
+        # Main loop
+        for i in range(num_merges):
+            # Calculating pair frequencies
+            stats = self._get_pairs(tokens)
+            if not stats:
+                break # Stop if no pairs remain
+
+            # Finding the most frequent pair
+            best_pair = stats.most_common(1)[0][0]
+            new_token = 256 + i # New token ID (starts from 256)
+
+            # Record merge in rules and update vocabulary
+            self.merges[best_pair] = new_token
+            self.vocab[new_token] = self.vocab[best_pair[0]] + self.vocab[best_pair[1]]
+
+            # Replace the pair in the token list for the next iteration
+            tokens = self._merge_pair(tokens, best_pair, new_token)
+            
+        # Method Chaining or Fluent Interface:
+        # 1. can Fluent API
+        # 2. Library standards
+        return self
 
     def encode(self, text: str) -> List[int]:
         """Encode string text into BPE token IDs using learned merge rules.
@@ -102,7 +131,17 @@ class BPETokenizer:
             List[int]: Encoded list of BPE token IDs.
         """
         # TODO: Convert text into raw UTF-8 bytes and iteratively apply learned merge rules in order
-        raise NotImplementedError("Implement this method")
+        if not text:
+            return []
+
+        # 1. Change text to basic byit
+        tokens = list(text.encode("utf-8"))
+
+        # 2. Apply learned merge rules in the same order they were recorded in train
+        for pair, new_token in self.merges.items():
+            tokens = self._merge_pair(tokens, pair, new_token)
+
+        return tokens
 
     def decode(self, tokens: List[int]) -> str:
         """Decode a list of BPE token IDs back into a text string.
