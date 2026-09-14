@@ -153,7 +153,8 @@ class BPETokenizer:
             str: Reconstructed text string.
         """
         # TODO: Lookup byte sequences for tokens, concatenate them, and decode UTF-8 bytes into text
-        raise NotImplementedError("Implement this method")
+        all_bytes = b"".join(self.vocab[token] for token in tokens)
+        return all_bytes.decode("utf-8")
 
     def vocab_size(self) -> int:
         """Get current vocabulary size.
@@ -162,7 +163,7 @@ class BPETokenizer:
             int: Total number of unique tokens in the vocabulary.
         """
         # TODO: Return total number of items in vocabulary
-        raise NotImplementedError("Implement this method")
+        return len(self.vocab)
 
     def token_to_str(self, token_id: int) -> str:
         """Convert a single token ID into its string representation for visualization.
@@ -174,7 +175,8 @@ class BPETokenizer:
             str: String representation of the token bytes.
         """
         # TODO: Fetch byte mapping for token ID and decode into printable string format
-        raise NotImplementedError("Implement this method")
+        token_bytes = self.vocab[token_id]
+        return token_bytes.decode("utf-8", errors="replace")
 
 
 def compression_ratio(tokenizer: Any, text: str) -> float:
