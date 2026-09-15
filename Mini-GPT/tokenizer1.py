@@ -179,6 +179,7 @@ class BPETokenizer:
         return token_bytes.decode("utf-8", errors="replace")
 
 
+# Part 3----------------------------------------
 def compression_ratio(tokenizer: Any, text: str) -> float:
     """Calculate token compression ratio relative to raw UTF-8 byte count.
 
@@ -201,7 +202,7 @@ def compression_ratio(tokenizer: Any, text: str) -> float:
 
     return token_count / byte_length
 
-
+# part 4------------------------------------------------------
 def vocabulary_stats(tokenizer: Any, texts: List[str]) -> None:
     """Compute and display usage statistics across a list of text corpora.
 
@@ -213,7 +214,26 @@ def vocabulary_stats(tokenizer: Any, texts: List[str]) -> None:
         None
     """
     # TODO: Compute token frequency metrics, average token lengths per word, and output summary stats
-    pass
+    token_freq = Counter()
+    total_tokens = 0
+    total_words = 0
+
+    for text in texts:
+        tokens = tokenizer.encode(text)
+        token_freq.update(tokens)
+        total_tokens += len(tokens)
+        total_words += len(text.split())
+
+    vocab_size = tokenizer.vocab_size()
+    avg_tokens_per_word = total_tokens / total_words if total_words > 0 else 0.0
+
+    print(f"Vocabulary Size: {vocab_size}") # 255 + merge_num
+    print(f"Total Tokens: {total_tokens}") # sum tokens
+    print(f"Total Words: {total_words}") # count vocab
+    print(f"Average Tokens Per Word: {avg_tokens_per_word:.2f}")
+    print("Top 10 Frequent Tokens:")
+    for token_id, count in token_freq.most_common(10):
+        print(f"  Token {token_id} ({tokenizer.token_to_str(token_id)!r}): {count}")
 
 
 # [KEEP_IMPLEMENTATION]
