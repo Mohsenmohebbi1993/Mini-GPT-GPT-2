@@ -175,7 +175,9 @@ class BPETokenizer:
             str: String representation of the token bytes.
         """
         # TODO: Fetch byte mapping for token ID and decode into printable string format
-        token_bytes = self.vocab[token_id]
+        token_bytes = self.vocab.get(token_id)
+        if token_bytes is None:
+            return ""
         return token_bytes.decode("utf-8", errors="replace")
 
 
