@@ -227,6 +227,7 @@ class ProductionTokenizer:
             self.vocab[new_id] = self.vocab[best_pair[0]] + self.vocab[best_pair[1]]
 
             # TODO: Replace the best pair in all chunk sequences using apply_merge
+            # edited `chunk_ids` to Reuse up to `num_merges`
             chunk_ids = [apply_merge(ids, best_pair, new_id) for ids in chunk_ids]
 
     def add_special_token(self, token_str: str) -> int:
@@ -240,7 +241,23 @@ class ProductionTokenizer:
             int: Assigned vocabulary integer ID for the special token.
         """
         # TODO: Allocate new_id, register special token with special_handler and add byte representation to vocab
-        raise NotImplementedError("Implement this method")
+        token_id = self.next_id
+        # first count token is 255 -> next new token is 255 + 1
+        # '<|begin|>' -> 255 + 1
+        self.next_id += 1
+
+        # Registering the token in the special token handler engine for text segmentation
+        # from class `special_handler`, add token
+        # update Regex pattern
+        self.special_handler.add_token(token_str, token_id)
+
+        # add byte to dict for decoding
+        self.vocab[token_id] = token_str.encode("utf-8")
+
+        # This line returns the unique numerical ID assigned to the special token
+        # Use for token padding and other part
+        # If this ID is not returned, we cannt know ID
+        return token_id
 
     def encode(self, text: str) -> List[int]:
         """
