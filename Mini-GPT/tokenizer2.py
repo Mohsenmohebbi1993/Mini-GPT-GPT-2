@@ -145,6 +145,7 @@ class SpecialTokenHandler:
         return result
 
 
+# part 4-------------------------------------------
 class ProductionTokenizer:
     """
     Byte-Pair Encoding (BPE) tokenizer supporting training, normalization, special tokens, encoding, and decoding.
@@ -153,9 +154,10 @@ class ProductionTokenizer:
     def __init__(self) -> None:
         """Initialize vocabulary, merges, special token handler, and next available token ID."""
         self.merges: Dict[Tuple[int, int], int] = {}
-        self.vocab: Dict[int, bytes] = {i: bytes([i]) for i in range(256)}
+        self.vocab: Dict[int, bytes] = {i: bytes([i]) for i in range(256)} # [0, 255]
+        # use class SpecialTokenHandler : Composition 
         self.special_handler: SpecialTokenHandler = SpecialTokenHandler()
-        self.next_id: int = 256
+        self.next_id: int = 256 # 255 +1 ...
 
     def normalize(self, text: str) -> str:
         """
@@ -168,7 +170,14 @@ class ProductionTokenizer:
             str: Unicode normalized string.
         """
         # TODO: Normalize input text using unicodedata NFKC standard
-        raise NotImplementedError("Implement this method")
+        # In the guide file:
+        # Apply Unicode normalization such as NFKC, and if necessary, perform lowercasing or accent removal
+        # but in todo say" `NFKC standard`
+        # from package unicodedata use normalize
+        # in doc `unicodedata.normalize` have `forms = ["NFC", "NFD", "NFKC", "NFKD"]`
+        # https://pypi.org/project/pyunormalize/
+        form_norm = "NFKC"
+        return unicodedata.normalize(form_norm, text)
 
     def train(self, text: str, num_merges: int) -> None:
         """
