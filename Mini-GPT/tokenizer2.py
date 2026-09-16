@@ -45,7 +45,25 @@ def apply_merge(byte_seq: List[int], pair: Tuple[int, int], new_id: int) -> List
         List[int]: A new list of token IDs with target pairs merged.
     """
     # TODO: Iterate through byte_seq, find adjacent matching pairs, and replace them with new_id
-    raise NotImplementedError("Implement this method")
+    # if len byte<2 , NOT merge
+    if len(byte_seq) < 2:
+        return list(byte_seq)
+
+    # make merge list
+    merged: list[int] = []
+    i = 0
+    first, second = pair
+
+    while i < len(byte_seq):
+        # len of text is end? 
+        if i < len(byte_seq) - 1 and byte_seq[i] == first and byte_seq[i + 1] == second:
+            merged.append(new_id)
+            i += 2  # go to next pair
+        else:
+            merged.append(byte_seq[i])
+            i += 1
+
+    return merged
 
 
 class SpecialTokenHandler:
