@@ -175,7 +175,7 @@ class ProductionTokenizer:
         # but in todo say" `NFKC standard`
         # from package unicodedata use normalize
         # in doc `unicodedata.normalize` have `forms = ["NFC", "NFD", "NFKC", "NFKD"]`
-        # https://pypi.org/project/pyunormalize/
+        # https://docs.python.org/3/library/unicodedata.html
         form_norm = "NFKC"
         return unicodedata.normalize(form_norm, text)
 
@@ -194,7 +194,40 @@ class ProductionTokenizer:
         # TODO: Iteratively count adjacent pair frequencies across all chunk byte sequences
         # TODO: Find the most frequent pair, create a new vocabulary entry, and record the merge rule
         # TODO: Replace the best pair in all chunk sequences using apply_merge
-        pass
+
+        # use normalizer
+        norm_text = self.normalize(text)
+
+        # basic chunk
+        # change to byte UTF-8 `[0, 255]`
+        chunks = pre_tokenize(norm_text)
+        chunk_ids: list[list[int]] = [list(chunk.encode("utf-8")) for chunk in chunks]
+
+        # TODO: Iteratively count adjacent pair frequencies across all chunk byte sequences
+        for _ in range(num_merges):
+            # Pair Frequency Counting
+            pair_counts: dict[tuple[int, int], int] = {}
+            # make merge
+            for ids in chunk_ids:
+                for i in range(len(ids) - 1):
+                    pair = (ids[i], ids[i + 1])
+                    pair_counts[pair] = pair_counts.get(pair, 0) + 1
+
+            #if len chunk < 2 stop
+            if not pair_counts:
+                break
+
+            # TODO: Find the most frequent pair, create a new vocabulary entry, and record the merge rule
+            best_pair = max(pair_counts, key=pair_counts.get)
+            new_id = self.next_id
+            self.next_id += 1
+
+            # add to roll merge
+            self.merges[best_pair] = new_id
+            self.vocab[new_id] = self.vocab[best_pair[0]] + self.vocab[best_pair[1]]
+
+            # TODO: Replace the best pair in all chunk sequences using apply_merge
+            chunk_ids = [apply_merge(ids, best_pair, new_id) for ids in chunk_ids]
 
     def add_special_token(self, token_str: str) -> int:
         """
