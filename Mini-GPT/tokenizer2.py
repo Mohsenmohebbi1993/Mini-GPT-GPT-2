@@ -3,6 +3,9 @@ import unicodedata
 from collections import Counter
 from typing import Dict, List, Tuple, Union
 
+
+# create pattern
+# if have `regex`, use that but have not use `re`
 try:
     import regex
     GPT2_PATTERN = regex.compile(
@@ -13,7 +16,7 @@ except ImportError:
         r"""'(?:[sdmt]|ll|ve|re)| ?[a-zA-Z]+| ?[0-9]+| ?[^\s\w]+|\s+(?!\S)|\s+"""
     )
 
-
+# part 1----------------------------------------------
 def pre_tokenize(text: str) -> List[str]:
     """
     Split input text into initial word/symbol chunks using the GPT-2 regex pattern.
@@ -25,9 +28,10 @@ def pre_tokenize(text: str) -> List[str]:
         List[str]: A list of string chunks matched by the pre-tokenization regex.
     """
     # TODO: Apply GPT2_PATTERN regex iterator over text to extract all chunk string matches
-    raise NotImplementedError("Implement this method")
+    return GPT2_PATTERN.findall(text)
 
 
+# Part 2----------------------------------------------
 def apply_merge(byte_seq: List[int], pair: Tuple[int, int], new_id: int) -> List[int]:
     """
     Replace consecutive occurrences of a specific pair of token IDs in a sequence with a new token ID.
