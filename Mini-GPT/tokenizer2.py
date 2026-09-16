@@ -272,7 +272,36 @@ class ProductionTokenizer:
         # TODO: Normalize input text and split into standard text and special token segments
         # TODO: For standard text segments, apply pre-tokenization and convert chunks into byte sequences
         # TODO: Apply learned BPE merges sequentially to byte sequences and collect all output token IDs
-        raise NotImplementedError("Implement this method")
+        #--------------------------------------------------------
+        # TODO: Normalize input text and split into standard text and special token segments
+
+        # use normalizer from `def normalize` by `"NFKC"`
+        normalized_text = self.normalize(text)
+
+        # split from `class SpecialTokenHandler` -> split_with_specials
+        segments = self.special_handler.split_with_specials(normalized_text)
+
+        tokens: List[int] = []
+
+        for segment, is_special in segments: # is_special is true or false
+            if is_special:
+                # For special tokens, the ID is directly retrieved from the handler's dictionary
+                tokens.append(self.special_handler.special_tokens[segment])
+            else:
+                # TODO: For standard text segments, apply pre-tokenization and convert chunks into byte sequences
+                # fram `def pre_tokenize`
+                chunks = pre_tokenize(segment)
+                for chunk in chunks:
+                    chunk_bytes = list(chunk.encode("utf-8"))
+
+                    # TODO: Apply learned BPE merges sequentially to byte sequences and collect all output token IDs
+                    for pair, new_id in self.merges.items():
+                        # from `def apply_merge`
+                        chunk_bytes = apply_merge(chunk_bytes, pair, new_id)
+
+                    tokens.extend(chunk_bytes)
+
+        return tokens
 
     def decode(self, ids: List[int]) -> str:
         """
