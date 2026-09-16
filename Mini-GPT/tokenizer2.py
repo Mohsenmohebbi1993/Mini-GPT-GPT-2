@@ -59,13 +59,14 @@ def apply_merge(byte_seq: List[int], pair: Tuple[int, int], new_id: int) -> List
         if i < len(byte_seq) - 1 and byte_seq[i] == first and byte_seq[i + 1] == second:
             merged.append(new_id)
             i += 2  # go to next pair
-        else:
+        else: # if we have 1 token and have not pair token
             merged.append(byte_seq[i])
             i += 1
 
     return merged
 
 
+# Part 3---------------------------------------
 class SpecialTokenHandler:
     """
     Manages registration and regex-based splitting of special tokens during tokenization.
@@ -88,7 +89,21 @@ class SpecialTokenHandler:
             None
         """
         # TODO: Store the token ID mapping and update the compiled regex pattern using re.escape
-        pass
+        # Save token and ID
+        self.special_tokens[token_str] = token_id
+        
+        # Constructing the regex pattern for all registered special token `]`
+        # Escaping special characters "<|end|>" ➜ "<\\|end\\|>"
+        # `|` IS NOT `or` in special characters
+        patterns = [re.escape(t) for t in self.special_tokens.keys()]
+        
+        # add `or` between special and next search that
+        combined_pattern = "|".join(patterns)
+        
+        # fast to run
+        # self.pattern is An object 
+        self.pattern = re.compile(combined_pattern)
+
 
     def split_with_specials(self, text: str) -> List[Tuple[str, bool]]:
         """
@@ -101,7 +116,33 @@ class SpecialTokenHandler:
             List[Tuple[str, bool]]: A list of tuples where each tuple is (substring, is_special_flag).
         """
         # TODO: Search text using pattern, split into standard text vs special token parts, and tag each part
-        raise NotImplementedError("Implement this method")
+        if not text:
+            return []
+
+        # if have NOT special characters return text
+        if not self.pattern or not self.special_tokens:
+            return [(text, False)]
+
+        result: list[tuple[str, bool]] = []
+        last_end = 0
+
+        # find special characters and start and end
+        for match in self.pattern.finditer(text):
+            start, end = match.span()
+
+            # between special characters have normal text
+            if start > last_end:
+                result.append((text[last_end:start], False))
+
+            # add token
+            result.append((match.group(), True))
+            last_end = end
+
+        # if next end special characters have text, add
+        if last_end < len(text):
+            result.append((text[last_end:], False))
+
+        return result
 
 
 class ProductionTokenizer:
