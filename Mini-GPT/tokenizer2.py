@@ -314,7 +314,9 @@ class ProductionTokenizer:
             str: Decoded UTF-8 text string.
         """
         # TODO: Map token IDs back to byte representations using vocabulary and decode as UTF-8
-        raise NotImplementedError("Implement this method")
+        byte_chunks = [self.vocab.get(i, b"") for i in ids]
+        raw_bytes = b"".join(byte_chunks)
+        return raw_bytes.decode("utf-8", errors="replace")
 
     def vocab_size(self) -> int:
         """
@@ -324,7 +326,7 @@ class ProductionTokenizer:
             int: Number of total entries in vocabulary.
         """
         # TODO: Return total number of vocabulary items
-        raise NotImplementedError("Implement this method")
+        return len(self.vocab)
 
     def get_token_bytes(self, token_id: int) -> bytes:
         """
@@ -337,7 +339,7 @@ class ProductionTokenizer:
             bytes: Byte sequence corresponding to token_id, or default placeholder if not found.
         """
         # TODO: Retrieve byte mapping from vocabulary dictionary for specified token_id
-        raise NotImplementedError("Implement this method")
+        return self.vocab.get(token_id, b"")
 
 
 # [KEEP_IMPLEMENTATION]
