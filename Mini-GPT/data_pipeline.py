@@ -18,7 +18,23 @@ def clean_text(text: str) -> str:
         str: Cleaned and normalized text string.
     """
     # TODO: Strip unwanted markup, non-ASCII noise, and normalize spaces/newlines.
-    raise NotImplementedError("Implement this method")
+    # if is NOT text-> return ""
+    if not text:
+        return ""
+
+    # by regex remove tags
+    text = re.sub(r"<[^>]+>", " ", text)
+
+    # remove URL
+    text = re.sub(r"https?://\S+|www\.\S+", " ", text)
+
+    # remove ASCII
+    text = re.sub(r"[^\x00-\x7F]+", " ", text)
+
+    # remove extera space in first and end
+    text = re.sub(r"\s+", " ", text).strip()
+
+    return text
 
 
 def quality_filter(
@@ -40,7 +56,25 @@ def quality_filter(
         bool: True if the document meets quality criteria, False otherwise.
     """
     # TODO: Check word count thresholds and measure capitalization and special-character ratios.
-    raise NotImplementedError("Implement this method")
+    # min vocab - Word count
+    words = text.split()
+    if len(words) < min_words:
+        return False
+
+    # Ratio of all-uppercase words
+    caps_words = sum(
+        1 for w in words
+        if w.isalpha() and w == w.upper()
+    )
+    if caps_words / len(words) > max_ratio_caps:
+        return False
+
+    # Special character density
+    n_special = sum(1 for ch in text if not ch.isalnum())
+    if n_special / len(text) > max_ratio_special:
+        return False
+
+    return True
 
 
 def get_shingles(text: str, k: int = 5) -> Set[str]:
