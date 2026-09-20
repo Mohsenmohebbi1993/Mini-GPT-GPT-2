@@ -421,8 +421,16 @@ def tokenize_corpus(documents: List[str], tokenizer: SimpleTokenizer) -> List[in
     Returns:
         List[int]: Flat list containing combined token sequence.
     """
-    # TODO: Tokenize individual documents, append EOS markers, and flatten into a continuous sequence.
-    raise NotImplementedError("Implement this method")
+    flat_tokens: List[int] = []
+    
+    for doc in documents:
+        doc_tokens = tokenizer.encode(doc)
+        flat_tokens.extend(doc_tokens)
+        
+        if tokenizer.eos_id is not None:
+            flat_tokens.append(tokenizer.eos_id)
+            
+    return flat_tokens
 
 
 def pack_sequences(
@@ -444,7 +452,31 @@ def pack_sequences(
     """
     # TODO: Chunk continuous token IDs into uniform blocks of fixed sequence length.
     # TODO: Apply padding to trailing sequence blocks and generate binary attention mask indicators.
-    raise NotImplementedError("Implement this method")
+    if not token_ids or seq_length <= 0:
+        return [], []
+
+    padded_sequences: List[List[int]] = []
+    attention_masks: List[List[int]] = []
+
+    # Iterating through tokens with fixed step sizes of `seq_length`
+    for i in range(0, len(token_ids), seq_length):
+        chunk = token_ids[i : i + seq_length]
+        chunk_len = len(chunk)
+
+        if chunk_len == seq_length:
+            # Full block without padding
+            padded_sequences.append(chunk)
+            attention_masks.append([1] * seq_length)
+        else:
+            # padding
+            pad_amount = seq_length - chunk_len
+            padded_chunk = chunk + [pad_id] * pad_amount
+            mask = [1] * chunk_len + [0] * pad_amount
+
+            padded_sequences.append(padded_chunk)
+            attention_masks.append(mask)
+
+    return padded_sequences, attention_masks
 
 
 class PreTrainingDataLoader:
@@ -480,7 +512,7 @@ class PreTrainingDataLoader:
             int: Number of available mini-batches.
         """
         # TODO: Compute total batch count accounting for ceiling division of sequence length.
-        raise NotImplementedError("Implement this method")
+        return math.ceil(len(self.sequences) / self.batch_size)
 
     def __iter__(self) -> Generator[Tuple[List[List[int]], List[List[int]]], None, None]:
         """
@@ -491,7 +523,18 @@ class PreTrainingDataLoader:
             (batch_sequences, batch_attention_masks) where each tensor component has shape (batch_size, seq_length).
         """
         # TODO: Shuffle document indices conditionally, iterate in mini-batch strides, and yield batch slices.
-        raise NotImplementedError("Implement this method")
+        indices = list(range(len(self.sequences)))
+
+        if self.shuffle:
+            random.shuffle(indices)
+
+        for i in range(0, len(indices), self.batch_size):
+            batch_indices = indices[i:i + self.batch_size]
+
+            batch_sequences = [self.sequences[idx] for idx in batch_indices]
+            batch_attention_masks = [self.attention_masks[idx] for idx in batch_indices]
+
+            yield batch_sequences, batch_attention_masks
 
 
 def compute_statistics(
@@ -514,7 +557,52 @@ def compute_statistics(
     """
     # TODO: Measure total corpus dimensions, compute character-to-token compression, and track document lengths.
     # TODO: Calculate top token frequencies, sequence padding efficiency ratios, and vocabulary utilization.
-    raise NotImplementedError("Implement this method")
+    num_documents = len(documents)
+    total_characters = sum(len(doc) for doc in documents)
+    total_tokens = len(token_ids)
+    
+    # len doc per len vocab
+    doc_char_lengths = [len(doc) for doc in documents] if documents else [0]
+    avg_doc_length_chars = total_characters / num_documents if num_documents > 0 else 0.0
+    min_doc_length_chars = min(doc_char_lengths) if documents else 0
+    max_doc_length_chars = max(doc_char_lengths) if documents else 0
+
+    # rate comperes
+    compression_ratio = total_characters / total_tokens if total_tokens > 0 else 0.0
+
+    # Token Frequency and Vocabulary Efficiency
+    token_counts = Counter(token_ids)
+    unique_tokens_used = len(token_counts)
+    vocab_utilization = unique_tokens_used / tokenizer_vocab_size if tokenizer_vocab_size > 0 else 0.0
+    top_10_tokens = token_counts.most_common(10)
+
+    # Padding Efficiency in Packed Sequences
+    num_sequences = len(sequences)
+    total_packed_tokens = sum(len(seq) for seq in sequences)
+    padding_efficiency = total_tokens / total_packed_tokens if total_packed_tokens > 0 else 0.0
+
+    return {
+        "corpus_metrics": {
+            "total_documents": num_documents,
+            "total_characters": total_characters,
+            "avg_doc_length_chars": round(avg_doc_length_chars, 2),
+            "min_doc_length_chars": min_doc_length_chars,
+            "max_doc_length_chars": max_doc_length_chars,
+        },
+        "token_metrics": {
+            "total_tokens": total_tokens,
+            "compression_ratio (chars/token)": round(compression_ratio, 3),
+            "unique_tokens_used": unique_tokens_used,
+            "vocabulary_size": tokenizer_vocab_size,
+            "vocabulary_utilization_ratio": round(vocab_utilization, 4),
+            "top_10_tokens": top_10_tokens,
+        },
+        "sequence_metrics": {
+            "total_sequences": num_sequences,
+            "total_packed_slots": total_packed_tokens,
+            "padding_efficiency_ratio": round(padding_efficiency, 4),
+        }
+    }
 
 
 # [KEEP_IMPLEMENTATION]
