@@ -71,7 +71,7 @@ def quality_filter(
         return False
 
     # Special character density
-    n_special = sum(1 for ch in text if not ch.isalnum())
+    n_special = sum(1 for ch in text if not ch.isalnum() and not ch.isspace())
     if n_special / len(text) > max_ratio_special:
         return False
 
