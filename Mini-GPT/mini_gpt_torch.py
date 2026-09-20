@@ -25,6 +25,9 @@ the incoming tensors, so the same code runs unchanged in float64.
 
 import torch
 import torch.nn as nn
+import math
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 class Embedding(nn.Module):
@@ -168,7 +171,39 @@ class MultiHeadAttention(nn.Module):
                 through W_out.
                 Shape: (batch_size, seq_len, embed_dim)
         """
-        raise NotImplementedError("Implement this method")
+        B, T, C = x.shape  # Batch, Seq_len, Embed_dim
+
+        # Computing Projections (Q, K, V)
+        q = self.W_q(x)
+        k = self.W_k(x)
+        v = self.W_v(x)
+
+        # Reshaping and Transposing into Heads
+        # Output: (B,num_heads, T, head_dim)
+        q = q.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
+        k = k.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
+        v = v.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
+
+        # Computing Scaled Dot-Product Attention
+        # (B, H, T, D) @ (B, H, D, T) -> (B, H, T, T)
+        scale = 1.0 / math.sqrt(self.head_dim)
+        att = (q @ k.transpose(-2, -1)) * scale
+
+        # Applying Causal Mask (if present)
+        if mask is not None:
+            # Mask must have dimensions (1, 1, T, T) or be broadcastable
+            att = att.masked_fill(mask == 0, float('-inf'))
+
+        # Softmax and multiplication by V
+        att = F.softmax(att, dim=-1)
+        y = att @ v  # (B, H, T, T) @ (B, H, T, D) -> (B, H, T, D)
+
+        # 6. Concatenate Heads
+        # Return to (B, T, C)
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
+
+
+        return self.W_out(y)
 
 
 class FeedForward(nn.Module):
@@ -203,7 +238,17 @@ class FeedForward(nn.Module):
             torch.Tensor: Transformed features, projected up to ff_dim and back down.
                 Shape: (..., embed_dim)
         """
-        raise NotImplementedError("Implement this method")
+        # Transforming `embed_dim` to `ff_dim`
+        x = self.fc1(x)
+        
+        # Non-linear Activation
+        # OpenAi use `GELU` but we use `ReLU`
+        x = torch.nn.functional.relu(x)
+        
+        # Contraction: Returning to `embed_dim`
+        x = self.fc2(x)
+        
+        return x
 
 
 class TransformerBlock(nn.Module):
