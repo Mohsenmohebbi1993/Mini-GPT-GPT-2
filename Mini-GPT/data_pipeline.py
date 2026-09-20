@@ -1,3 +1,4 @@
+import math
 import re
 import hashlib
 import random
@@ -561,11 +562,9 @@ def compute_statistics(
     total_characters = sum(len(doc) for doc in documents)
     total_tokens = len(token_ids)
     
-    # len doc per len vocab
-    doc_char_lengths = [len(doc) for doc in documents] if documents else [0]
-    avg_doc_length_chars = total_characters / num_documents if num_documents > 0 else 0.0
-    min_doc_length_chars = min(doc_char_lengths) if documents else 0
-    max_doc_length_chars = max(doc_char_lengths) if documents else 0
+    # len doc per words
+    total_words = sum(len(doc.split()) for doc in documents)
+    avg_doc_length_words = total_words / num_documents if num_documents > 0 else 0.0
 
     # rate comperes
     compression_ratio = total_characters / total_tokens if total_tokens > 0 else 0.0
@@ -574,34 +573,22 @@ def compute_statistics(
     token_counts = Counter(token_ids)
     unique_tokens_used = len(token_counts)
     vocab_utilization = unique_tokens_used / tokenizer_vocab_size if tokenizer_vocab_size > 0 else 0.0
-    top_10_tokens = token_counts.most_common(10)
 
     # Padding Efficiency in Packed Sequences
     num_sequences = len(sequences)
     total_packed_tokens = sum(len(seq) for seq in sequences)
-    padding_efficiency = total_tokens / total_packed_tokens if total_packed_tokens > 0 else 0.0
+    sequence_utilization = total_tokens / total_packed_tokens if total_packed_tokens > 0 else 0.0
 
     return {
-        "corpus_metrics": {
-            "total_documents": num_documents,
-            "total_characters": total_characters,
-            "avg_doc_length_chars": round(avg_doc_length_chars, 2),
-            "min_doc_length_chars": min_doc_length_chars,
-            "max_doc_length_chars": max_doc_length_chars,
-        },
-        "token_metrics": {
-            "total_tokens": total_tokens,
-            "compression_ratio (chars/token)": round(compression_ratio, 3),
-            "unique_tokens_used": unique_tokens_used,
-            "vocabulary_size": tokenizer_vocab_size,
-            "vocabulary_utilization_ratio": round(vocab_utilization, 4),
-            "top_10_tokens": top_10_tokens,
-        },
-        "sequence_metrics": {
-            "total_sequences": num_sequences,
-            "total_packed_slots": total_packed_tokens,
-            "padding_efficiency_ratio": round(padding_efficiency, 4),
-        }
+        "total_documents": num_documents,
+        "total_characters": total_characters,
+        "total_tokens": total_tokens,
+        "unique_tokens": unique_tokens_used,
+        "vocab_utilization": vocab_utilization,
+        "compression_ratio": compression_ratio,
+        "avg_doc_length_words": avg_doc_length_words,
+        "num_sequences": num_sequences,
+        "sequence_utilization": sequence_utilization,
     }
 
 
