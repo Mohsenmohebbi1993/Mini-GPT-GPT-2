@@ -194,7 +194,60 @@ def deduplicate(
     """
     # TODO: Build MinHash signatures and map documents into LSH band buckets.
     # TODO: Collect candidate pairs from shared buckets, verify Jaccard similarity, and prune duplicates.
-    raise NotImplementedError("Implement this method")
+    if not documents:
+        return [], 0
+
+    # save new data
+    # We keep the shingles so that in the final step
+    # instead of an estimation, we compute the exact Jaccard similarity
+    signatures = []
+    doc_shingles = []
+
+    for doc in documents:
+        
+        shingles = get_shingles(doc, k=5) # from def get_shingles(difalt k=5)
+        doc_shingles.append(shingles)
+        signatures.append(minhash_signature(shingles, num_hashes))
+
+    # Mapping and make lsh_index
+    lsh_index = defaultdict(list)
+    for idx, sig in enumerate(signatures):
+        buckets = lsh_buckets(sig, bands)
+        for band_id, b_hash in buckets:
+            lsh_index[(band_id, b_hash)].append(idx)
+
+    # find 
+    to_remove = set()
+    already_compared = set()
+
+    for candidates in lsh_index.values():
+        if len(candidates) < 2:
+            continue
+            
+        # Check all pairs in a bucket
+        for i in range(len(candidates)):
+            for j in range(i + 1, len(candidates)):
+                idx1, idx2 = candidates[i], candidates[j]
+                
+                # sort for dublicate
+                pair = tuple(sorted((idx1, idx2)))
+                if pair in already_compared or idx1 in to_remove or idx2 in to_remove:
+                    continue
+                
+                already_compared.add(pair)
+                # Verification
+                s1, s2 = doc_shingles[idx1], doc_shingles[idx2]
+                if not s1 or not s2: continue
+                
+                jaccard = len(s1 & s2) / len(s1 | s2)
+                
+                if jaccard >= threshold:
+                    to_remove.add(idx2)
+
+    # create list
+    deduplicated_docs = [doc for i, doc in enumerate(documents) if i not in to_remove]
+    
+    return deduplicated_docs, len(to_remove)
 
 
 class SimpleTokenizer:
@@ -228,7 +281,59 @@ class SimpleTokenizer:
         # TODO: Convert text to raw byte tokens and iteratively identify most frequent token pairs.
         # TODO: Register new merged tokens into vocabulary and replace occurrences in token stream.
         # TODO: Assign specialized End-of-Sequence (EOS) token ID.
-        pass
+        if not text:
+            return
+
+        # encode UTF-8
+        tokens = list(text.encode("utf-8"))
+
+        for _ in range(num_merges):
+            if len(tokens) < 2:
+                break
+
+            # zip: fast to run
+            # statitics
+            stats: Dict[Tuple[int, int], int] = {}
+            # add token 1 + token 2 nad zip to make a pair
+            for pair in zip(tokens, tokens[1:]):
+                stats[pair] = stats.get(pair, 0) + 1
+
+            # if pair have 2 object
+            if not stats:
+                break
+
+            # max repeite pari
+            best_pair = max(stats, key=stats.get)
+
+            # if have NOT 2 object
+            if stats[best_pair] < 2:
+                break
+
+            # update merges and vocab and id
+            idx = self.next_id
+            self.merges[best_pair] = idx
+            self.vocab[idx] = self.vocab[best_pair[0]] + self.vocab[best_pair[1]]
+            self.next_id += 1
+
+            # make new token
+            new_tokens = []
+            i = 0
+            while i < len(tokens):
+                if (
+                    i < len(tokens) - 1
+                    and tokens[i] == best_pair[0]
+                    and tokens[i + 1] == best_pair[1]
+                ):
+                    new_tokens.append(idx)
+                    i += 2
+                else:
+                    new_tokens.append(tokens[i])
+                    i += 1
+            tokens = new_tokens
+
+        self.eos_id = self.next_id
+        self.vocab[self.eos_id] = b"<|endoftext|>"
+        self.next_id += 1
 
     def encode(self, text: str) -> List[int]:
         """
@@ -241,7 +346,32 @@ class SimpleTokenizer:
             List[int]: Encoded list of token IDs.
         """
         # TODO: Convert input text to byte IDs and sequentially apply learned BPE merge rules.
-        raise NotImplementedError("Implement this method")
+        if not text:
+            return []
+
+        tokens = list(text.encode("utf-8"))
+
+        # Applying merges in the exact order they were recorded during training
+        for pair, new_id in self.merges.items():
+            if len(tokens) < 2:
+                break
+
+            new_tokens = []
+            i = 0
+            while i < len(tokens):
+                if (
+                    i < len(tokens) - 1
+                    and tokens[i] == pair[0]
+                    and tokens[i + 1] == pair[1]
+                ):
+                    new_tokens.append(new_id)
+                    i += 2
+                else:
+                    new_tokens.append(tokens[i])
+                    i += 1
+            tokens = new_tokens
+
+        return tokens
 
     def decode(self, ids: List[int]) -> str:
         """
@@ -254,7 +384,20 @@ class SimpleTokenizer:
             str: Decoded text representation.
         """
         # TODO: Reconstruct byte sequence from token IDs, skipping special tokens, and decode to UTF-8 text.
-        raise NotImplementedError("Implement this method")
+        # O(n**2) --> O(1)
+        byte_sequence = bytearray()
+        
+        for id_ in ids:
+            # Control tokens like `eos_id` are not part of the original text
+            # therefore, they must be removed during text reconstruction to avoid introducing noise.
+            if self.eos_id is not None and id_ == self.eos_id:
+                continue
+            
+            # Retrieving the bytes corresponding to the ID from the vocabulary
+            if id_ in self.vocab:
+                byte_sequence.extend(self.vocab[id_])
+        
+        return byte_sequence.decode("utf-8", errors="replace")
 
     def vocab_size(self) -> int:
         """
@@ -264,7 +407,7 @@ class SimpleTokenizer:
             int: Total vocabulary size.
         """
         # TODO: Return total number of active entries in vocabulary.
-        raise NotImplementedError("Implement this method")
+        return len(self.vocab)
 
 
 def tokenize_corpus(documents: List[str], tokenizer: SimpleTokenizer) -> List[int]:
