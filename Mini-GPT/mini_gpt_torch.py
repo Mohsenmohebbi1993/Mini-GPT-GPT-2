@@ -60,7 +60,17 @@ class Embedding(nn.Module):
                 positions 0..seq_len-1, broadcast across the batch.
                 Shape: (batch_size, seq_len, embed_dim)
         """
-        raise NotImplementedError("Implement this method")
+        # input shape
+        batch_size, seq_len = token_ids.shape
+        
+        # extract token
+        tok_emb = self.token_embed(token_ids)
+        
+        # Creating position indices (0 to seq_len-1) and moving to the same device as the input
+        pos_ids = torch.arange(seq_len, device=token_ids.device)
+        pos_emb = self.pos_embed(pos_ids)
+        
+        return tok_emb + pos_emb
 
 
 class LayerNorm(nn.Module):
@@ -95,7 +105,20 @@ class LayerNorm(nn.Module):
                 The mean and the biased variance are computed over the last axis only.
                 Shape: (..., dim)
         """
-        raise NotImplementedError("Implement this method")
+        # Compute the mean along the last dimension (feature dimension)
+        # `keepdim=True` is necessary to preserve dimensions for broadcasting
+        mean = x.mean(dim=-1, keepdim=True)
+        
+        # Compute the variance (biased) along the last dimension
+        # Variance = Mean of squared differences from the mean
+        var = ((x - mean) ** 2).mean(dim=-1, keepdim=True)
+        
+        # Normalization
+        # Add eps to prevent division by zero (numerical stability)
+        x_norm = (x - mean) / torch.sqrt(var + self.eps)
+        
+        # 4. Scale and Shift
+        return x_norm * self.gamma + self.beta
 
 
 class MultiHeadAttention(nn.Module):
