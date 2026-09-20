@@ -89,7 +89,23 @@ def get_shingles(text: str, k: int = 5) -> Set[str]:
         Set[str]: Unique set of k-word shingles.
     """
     # TODO: Lowercase, tokenize into words, and construct word n-gram shingles.
-    raise NotImplementedError("Implement this method")
+    if not text:
+        return set()
+
+    # Lower
+    words = text.lower().split()
+
+    # if k is graten than len(tex) -> cannot use
+    if len(words) < k:
+        return set()
+
+    # Join
+    shingles = {
+        " ".join(words[i : i + k]) 
+        for i in range(len(words) - k + 1)
+    }
+
+    return shingles
 
 
 def minhash_signature(shingles: Set[str], num_hashes: int = 128) -> List[int]:
@@ -104,7 +120,30 @@ def minhash_signature(shingles: Set[str], num_hashes: int = 128) -> List[int]:
         List[int]: MinHash signature list of length (num_hashes,).
     """
     # TODO: Generate hash permutations for each seed and compute the minimum hash value per seed.
-    raise NotImplementedError("Implement this method")
+    if not shingles:
+        return [0] * num_hashes
+
+    signature = []
+
+    for seed in range(num_hashes):
+        min_val = float("inf")
+        seed_bytes = str(seed).encode("utf-8")
+
+        for s in shingles:
+            
+            # Combining a seed and a shingle to simulate an independent and deterministic hash function.
+            h = hashlib.md5(seed_bytes + b"_" + s.encode("utf-8")).hexdigest()
+
+            #Converting to an integer and optimizing processing speed
+            
+            val = int(h[:16], 16)
+
+            if val < min_val:
+                min_val = val
+
+        signature.append(min_val)
+
+    return signature
 
 
 def lsh_buckets(signature: List[int], bands: int = 16) -> List[Tuple[int, str]]:
@@ -119,7 +158,20 @@ def lsh_buckets(signature: List[int], bands: int = 16) -> List[Tuple[int, str]]:
         List[Tuple[int, str]]: List of (band_id, bucket_hash) tuples of length (bands,).
     """
     # TODO: Slice signature into bands, hash each band chunk, and map to bucket identifiers.
-    raise NotImplementedError("Implement this method")
+    num_hashes = len(signature)
+    r = num_hashes // bands
+
+    buckets = []
+    for band_id in range(bands):
+
+        chunk = signature[band_id * r : (band_id + 1) * r]
+
+        chunk_bytes = ",".join(map(str, chunk)).encode("utf-8")
+        bucket_hash = hashlib.md5(chunk_bytes).hexdigest()
+
+        buckets.append((band_id, bucket_hash))
+
+    return buckets
 
 
 def deduplicate(
