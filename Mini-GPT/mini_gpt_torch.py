@@ -178,8 +178,7 @@ class MultiHeadAttention(nn.Module):
         k = self.W_k(x)
         v = self.W_v(x)
 
-        # Reshaping and Transposing into Heads
-        # Output: (B,num_heads, T, head_dim)
+        # Reshaping and Transposing into Heads: (B, H, T, D)
         q = q.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
         k = k.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
         v = v.view(B, T, self.num_heads, self.head_dim).transpose(1, 2)
@@ -189,21 +188,23 @@ class MultiHeadAttention(nn.Module):
         scale = 1.0 / math.sqrt(self.head_dim)
         att = (q @ k.transpose(-2, -1)) * scale
 
-        # Applying Causal Mask (if present)
+        # Applying Additive Causal Mask
         if mask is not None:
-            # Mask must have dimensions (1, 1, T, T) or be broadcastable
-            att = att.masked_fill(mask == 0, float('-inf'))
+            att = att + mask
 
-        # Softmax and multiplication by V
-        att = F.softmax(att, dim=-1)
-        y = att @ v  # (B, H, T, T) @ (B, H, T, D) -> (B, H, T, D)
+        # Numerically Stable Hand-crafted Softmax along the last dimension
+        att_max = torch.max(att, dim=-1, keepdim=True).values
+        exp_att = torch.exp(att - att_max)
+        att_weights = exp_att / torch.sum(exp_att, dim=-1, keepdim=True)
 
-        # 6. Concatenate Heads
-        # Return to (B, T, C)
+        # Multiplication by Values: (B, H, T, T) @ (B, H, T, D) -> (B, H, T, D)
+        y = att_weights @ v
+
+        # Concatenate Heads: (B, H, T, D) -> (B, T, H, D) -> (B, T, C)
         y = y.transpose(1, 2).contiguous().view(B, T, C)
 
-
         return self.W_out(y)
+
 
 
 class FeedForward(nn.Module):
@@ -288,7 +289,17 @@ class TransformerBlock(nn.Module):
             torch.Tensor: Output representation with the same shape as the input.
                 Shape: (batch_size, seq_len, embed_dim)
         """
-        raise NotImplementedError("Implement this method")
+        # 1. Attention Sub-layer with Pre-LN and Residual Connection
+        norm_x = self.ln1(x)
+        attn_out = self.attn(norm_x, mask=mask)
+        x = x + attn_out
+
+        # 2. Feed-Forward Sub-layer with Pre-LN and Residual Connection
+        norm_x = self.ln2(x)
+        ffn_out = self.ffn(norm_x)
+        x = x + ffn_out
+
+        return x
 
 
 def causal_mask(seq_len, dtype=torch.float32, device=None):
@@ -307,7 +318,20 @@ def causal_mask(seq_len, dtype=torch.float32, device=None):
             the mask stays valid in float64.
             Shape: (seq_len, seq_len)
     """
-    raise NotImplementedError("Implement this function")
+    # make matrix zero
+    mask = torch.zeros((seq_len, seq_len), dtype=dtype, device=device)
+
+    # find type min value
+    min_val = torch.finfo(dtype).min
+
+    # Locate positions strictly above the main diagonal
+    # `diagonal=1` targets the strictly upper triangular region
+    upper_tri_indices = torch.triu(torch.ones(seq_len, seq_len, dtype=torch.bool, device=device), diagonal=1)
+
+    # Substitute large negative values into future positions.
+    mask = mask.masked_fill(upper_tri_indices, min_val)
+
+    return mask
 
 
 class MiniGPT(nn.Module):
@@ -357,7 +381,29 @@ class MiniGPT(nn.Module):
                 `seq_len` must prevent every position from attending to later positions.
                 Shape: (batch_size, seq_len, vocab_size)
         """
-        raise NotImplementedError("Implement this method")
+        B, T = token_ids.shape
+        device = token_ids.device
+
+        # Embeddings
+        x = self.embedding(token_ids)
+
+        #Causal Mask
+        mask = causal_mask(T, dtype=x.dtype, device=device)
+
+        # TransformerBlock
+        for block in self.blocks:
+            x = block(x, mask=mask)
+
+        # NOrmalizer
+        x = self.ln_f(x)
+
+        # 5. Weight Tying for Logits computation (Matrix multiplication with token embedding weights)
+        # x: (B, T, embed_dim), token_embed: (vocab_size, embed_dim)
+        # Output: (B, T, vocab_size)
+        token_weights = self.embedding.token_embed.weight
+        logits = torch.matmul(x, token_weights.t())
+
+        return logits
 
     def count_parameters(self):
         """
@@ -372,8 +418,34 @@ class MiniGPT(nn.Module):
         Returns:
             int: Grand total parameter count across all components.
         """
-        raise NotImplementedError("Implement this method")
+        V = self.vocab_size
+        D = self.embed_dim
+        M = self.max_seq_len
+        num_layers = len(self.blocks)
+        # first layer ff_dim
+        ff_dim = self.blocks[0].ffn.fc1.out_features
 
+        # 1. Embeddings
+        token_emb = V * D
+        pos_emb = M * D
+
+        # Per-block parameters
+        # Attention: W_q, W_k, W_v, W_out (bias=False)
+        attn_params = 4 * (D * D)
+
+        # FeedForward: fc1 (weight + bias) + fc2 (weight + bias)
+        ffn_params = (D * ff_dim + ff_dim) + (ff_dim * D + D)
+
+        # Block LayerNorms: ln1 (gamma + beta) + ln2 (gamma + beta)
+        block_ln_params = 2 * (2 * D)
+
+        block_total = (attn_params + ffn_params + block_ln_params) * num_layers
+
+        # Final LayerNorm: ln_f (gamma + beta)
+        final_ln_params = 2 * D
+
+        total_params = token_emb + pos_emb + block_total + final_ln_params
+        return total_params
 
 def cross_entropy_loss(logits, targets):
     """
@@ -394,7 +466,23 @@ def cross_entropy_loss(logits, targets):
             batch_size * seq_len positions.
             Shape: ()
     """
-    raise NotImplementedError("Implement this function")
+    #Flatten logits: (B, T, V) -> (N, V) | targets: (B, T) -> (N,)
+    N_V = logits.view(-1, logits.size(-1))
+    flat_targets = targets.view(-1, 1)
+
+    #Numerically stable Log-Softmax
+    max_logits = N_V.max(dim=-1, keepdim=True).values
+    shifted = N_V - max_logits
+    log_sum_exp = torch.log(torch.sum(torch.exp(shifted), dim=-1, keepdim=True))
+    log_probs = shifted - log_sum_exp
+
+    # Extract log-probability of target indices: (N, 1)
+    target_log_probs = torch.gather(log_probs, dim=-1, index=flat_targets)
+
+    # Negative Log-Likelihood and average over all positions
+    loss = -target_log_probs.mean()
+
+    return loss
 
 
 def generate(model, prompt_tokens, max_new_tokens=100, temperature=0.8):
