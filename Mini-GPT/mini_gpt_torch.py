@@ -504,7 +504,34 @@ def generate(model, prompt_tokens, max_new_tokens=100, temperature=0.8):
             len(prompt_tokens) + max_new_tokens. The context fed to the model at each
             step must be truncated to the model's maximum sequence length.
     """
-    raise NotImplementedError("Implement this function")
+    model.eval()
+
+    # Extracting the device model from the first available parameter
+    device = next(model.parameters()).device
+
+    # change to tensor (1, seq_len)
+    idx = torch.tensor(prompt_tokens, dtype=torch.long, device=device).unsqueeze(0)
+
+    # loop automatic backforward
+    for _ in range(max_new_tokens):
+        # split to max_seq_len
+        idx_cond = idx if idx.size(1) <= model.max_seq_len else idx[:, -model.max_seq_len:]
+
+        # forward
+        logits = model(idx_cond)
+
+        # Extracting logits for the last token
+        logits = logits[:, -1, :] / temperature
+
+        # Softmax
+        probs = torch.nn.functional.softmax(logits, dim=-1)
+
+        # Sampling from a probability distribution while maintaining reproducibility
+        next_token = torch.multinomial(probs, num_samples=1)
+
+        idx = torch.cat((idx, next_token), dim=1)
+
+    return idx[0].tolist()
 
 
 def train_mini_gpt(text, vocab_size=256, embed_dim=128, num_heads=4,
@@ -540,7 +567,63 @@ def train_mini_gpt(text, vocab_size=256, embed_dim=128, num_heads=4,
     Returns:
         MiniGPT: The trained model instance, left in eval mode.
     """
-    raise NotImplementedError("Implement this function")
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Training on device: {device}")
+
+    
+    data_bytes = list(text.encode('utf-8'))
+    data = torch.tensor(data_bytes, dtype=torch.long)
+    
+    n_tokens = len(data)
+    if n_tokens <= seq_len + 1:
+        raise ValueError(f"Text length ({n_tokens}) must be greater than seq_len + 1 ({seq_len + 1})")
+
+    # make model gpt
+    model = MiniGPT(
+        vocab_size=vocab_size,
+        embed_dim=embed_dim,
+        num_heads=num_heads,
+        num_layers=num_layers,
+        max_seq_len=seq_len
+    ).to(device)
+
+    model.train()
+
+    # Optimizer
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+
+    #loop learning
+    for step in range(1, num_steps + 1):
+        # Randomly selecting `batch_size` starting indices for windows of length `seq_len + 1`
+        max_start_idx = n_tokens - (seq_len + 1)
+        ix = torch.randint(0, max_start_idx + 1, (batch_size,))
+
+        # Extracting input and target (shifting one token to the right)
+        x = torch.stack([data[i:i + seq_len] for i in ix]).to(device)
+        y = torch.stack([data[i + 1:i + 1 + seq_len] for i in ix]).to(device)
+
+        # forward
+        logits = model(x)  #(batch_size, seq_len, vocab_size)
+
+        # Calculate the loss using the function you implemented (or the `cross_entropy_loss` implemented in the project)
+        try:
+            loss = cross_entropy_loss(logits, y)
+        except NameError:
+            # If the function name in the file is `F.cross_entropy` or something else:
+            loss = torch.nn.functional.cross_entropy(logits.reshape(-1, vocab_size), y.reshape(-1))
+
+        # Backdrop and weight updates
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+
+        if step % 20 == 0 or step == 1:
+            print(f"Step {step:4d}/{num_steps} | Loss: {loss.item():.4f}")
+
+    model.eval()
+    return model
 
 
 def parameter_breakdown():
