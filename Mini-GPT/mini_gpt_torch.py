@@ -713,3 +713,109 @@ Fine-tuning adapts the pre-trained model to specific downstream tasks."""
     output_tokens = generate(model, prompt, max_new_tokens=100, temperature=0.6)
     generated_text = bytes(output_tokens).decode("utf-8", errors="replace")
     print(f"Generated: {generated_text}")
+
+
+# ------------------------------------------------------------------------------
+
+# GPT-2 Family Parameter Counts
+# =================================================================
+# Model            Layers  Heads   Dims         Params
+# -----------------------------------------------------------------
+# GPT-2 Small          12     12    768    124,402,944
+# GPT-2 Medium         24     16   1024    354,724,864
+# GPT-2 Large          36     20   1280    773,845,760
+# GPT-2 XL             48     25   1600  1,557,304,000
+
+# Memory Requirements for Inference (FP16)
+# =================================================================
+# Model                       Weights     KV Cache      Total
+# -----------------------------------------------------------------
+# GPT-2 Small (124M)           248 MB        38 MB     286 MB
+# Llama 3 8B                  16.0 GB       4.3 GB    20.3 GB
+# Llama 3 70B                140.0 GB      21.5 GB   161.5 GB
+# Llama 3 405B               810.0 GB    1082.3 GB  1892.3 GB
+
+# Training Mini GPT
+# =================================================================
+# Training on device: cuda
+# Step    1/1500 | Loss: 5.5523
+# Step   20/1500 | Loss: 4.0592
+# Step   40/1500 | Loss: 3.2887
+# Step   60/1500 | Loss: 2.9443
+# Step   80/1500 | Loss: 2.6981
+# Step  100/1500 | Loss: 2.4416
+# Step  120/1500 | Loss: 2.5660
+# Step  140/1500 | Loss: 2.2966
+# Step  160/1500 | Loss: 2.1960
+# Step  180/1500 | Loss: 2.1416
+# Step  200/1500 | Loss: 1.9213
+# Step  220/1500 | Loss: 1.7148
+# Step  240/1500 | Loss: 1.5868
+# Step  260/1500 | Loss: 1.4238
+# Step  280/1500 | Loss: 1.2382
+# Step  300/1500 | Loss: 0.9939
+# Step  320/1500 | Loss: 0.9191
+# Step  340/1500 | Loss: 0.8206
+# Step  360/1500 | Loss: 0.5759
+# Step  380/1500 | Loss: 0.4671
+# Step  400/1500 | Loss: 0.3608
+# Step  420/1500 | Loss: 0.4075
+# Step  440/1500 | Loss: 0.3402
+# Step  460/1500 | Loss: 0.4647
+# Step  480/1500 | Loss: 0.3002
+# Step  500/1500 | Loss: 0.2887
+# Step  520/1500 | Loss: 0.2728
+# Step  540/1500 | Loss: 0.2482
+# Step  560/1500 | Loss: 0.2447
+# Step  580/1500 | Loss: 0.2048
+# Step  600/1500 | Loss: 0.1951
+# Step  620/1500 | Loss: 0.2672
+# Step  640/1500 | Loss: 0.1663
+# Step  660/1500 | Loss: 0.1946
+# Step  680/1500 | Loss: 0.2106
+# Step  700/1500 | Loss: 0.1772
+# Step  720/1500 | Loss: 0.3287
+# Step  740/1500 | Loss: 0.2087
+# Step  760/1500 | Loss: 0.2054
+# Step  780/1500 | Loss: 0.1613
+# Step  800/1500 | Loss: 0.2028
+# Step  820/1500 | Loss: 0.1661
+# Step  840/1500 | Loss: 0.1566
+# Step  860/1500 | Loss: 0.1636
+# Step  880/1500 | Loss: 0.2913
+# Step  900/1500 | Loss: 0.1482
+# Step  920/1500 | Loss: 0.1159
+# Step  940/1500 | Loss: 0.1750
+# Step  960/1500 | Loss: 0.1258
+# Step  980/1500 | Loss: 0.2268
+# Step 1000/1500 | Loss: 0.1878
+# Step 1020/1500 | Loss: 0.1652
+# Step 1040/1500 | Loss: 0.1804
+# Step 1060/1500 | Loss: 0.1348
+# Step 1080/1500 | Loss: 0.1202
+# Step 1100/1500 | Loss: 0.1307
+# Step 1120/1500 | Loss: 0.1791
+# Step 1140/1500 | Loss: 0.2285
+# Step 1160/1500 | Loss: 0.1057
+# Step 1180/1500 | Loss: 0.1511
+# Step 1200/1500 | Loss: 0.1290
+# Step 1220/1500 | Loss: 0.1207
+# Step 1240/1500 | Loss: 0.1364
+# Step 1260/1500 | Loss: 0.1380
+# Step 1280/1500 | Loss: 0.1199
+# Step 1300/1500 | Loss: 0.1361
+# Step 1320/1500 | Loss: 0.1411
+# Step 1340/1500 | Loss: 0.1299
+# Step 1360/1500 | Loss: 0.1535
+# Step 1380/1500 | Loss: 0.1320
+# Step 1400/1500 | Loss: 0.1485
+# Step 1420/1500 | Loss: 0.1982
+# Step 1440/1500 | Loss: 0.1486
+# Step 1460/1500 | Loss: 0.1329
+# Step 1480/1500 | Loss: 0.1093
+# Step 1500/1500 | Loss: 0.1023
+
+# Prompt: 'The transformer'
+# Generating...
+# Generated: The transformer architecture has revolutionized natural language processsing.
+# Attention mechanisms alllow the model
