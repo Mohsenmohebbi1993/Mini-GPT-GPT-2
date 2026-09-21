@@ -17,6 +17,18 @@ import mini_gpt_torch
 importlib.reload(mini_gpt_torch)
 from mini_gpt_torch import MiniGPT, cross_entropy_loss, generate
 
+# for persian inatall RTL
+# !pip install arabic-reshaper python-bidi
+import arabic_reshaper
+from bidi.algorithm import get_display
+
+def display_persian(text: str) -> str:
+    """**RTL**
+    """
+    reshaped = arabic_reshaper.reshape(text)
+    return get_display(reshaped)
+#-----------------------------------------------------------
+
 print("Import Packages from mini_gpt_torch and data_pipline")
 #------------------------------------------------------------
  # def clear_data is NOT for persian
@@ -143,17 +155,42 @@ print(f"Training completed Final loss---- {loss.item():.4f}")
 
 
 # ---------------Sampel text to test------------------
-print("Sampel text to test".center(60, "-"))
+print("Sample text to test".center(60, "-"))
+
+# print("Sampel text to test".center(60, "-"))
+# model.eval()
+# # test_prompt = "دکتر بسیار با حوصله"
+# test_prompt = input("persian text e.g.دکتر بسیار با حوصله   :   ")
+
+# prompt_tokens = tokenizer.encode(test_prompt)
+# print(f"\nPrompt: '{test_prompt}'")
+# print("Generating the rest of the comment--- ")
+
+# output_tokens = generate(model, prompt_tokens, max_new_tokens=40, temperature=0.7)
+# generated_text = tokenizer.decode(output_tokens)
+# print(f"\nGenerated Result:\n{generated_text}")
+
+
+
+import arabic_reshaper
+from bidi.algorithm import get_display
+
+def fix_rtl(text: str) -> str:
+    """RTL"""
+    reshaped = arabic_reshaper.reshape(text)
+    return get_display(reshaped)
+
+print("Sample text to test".center(60, "-"))
 model.eval()
-# test_prompt = "دکتر بسیار با حوصله"
-test_prompt = input("persian text e.g. `دکتر بسیار با حوصله`  :   ")
+
+prompt_msg = get_display(arabic_reshaper.reshape("متن مورد نظر را وارد کنید (مثال: دکتر بسیار با حوصله) :   "))
+test_prompt = input(prompt_msg)
 
 prompt_tokens = tokenizer.encode(test_prompt)
-print(f"\nPrompt: '{test_prompt}'")
-print("Generating the rest of the comment--- ")
+print(f"\nPrompt: '{fix_rtl(test_prompt)}'")
+print("Generating the rest of the comment...")
 
 output_tokens = generate(model, prompt_tokens, max_new_tokens=40, temperature=0.7)
 generated_text = tokenizer.decode(output_tokens)
-print(f"\nGenerated Result:\n{generated_text}")
 
-
+print(f"\nGenerated Result:\n{fix_rtl(generated_text)}")
