@@ -17,16 +17,7 @@ import mini_gpt_torch
 importlib.reload(mini_gpt_torch)
 from mini_gpt_torch import MiniGPT, cross_entropy_loss, generate
 
-# for persian inatall RTL
-# !pip install arabic-reshaper python-bidi
-import arabic_reshaper
-from bidi.algorithm import get_display
 
-def display_persian(text: str) -> str:
-    """**RTL**
-    """
-    reshaped = arabic_reshaper.reshape(text)
-    return get_display(reshaped)
 #-----------------------------------------------------------
 
 print("Import Packages from mini_gpt_torch and data_pipline")
@@ -171,7 +162,8 @@ print("Sample text to test".center(60, "-"))
 # print(f"\nGenerated Result:\n{generated_text}")
 
 
-
+# for persian inatall RTL
+# !pip install arabic-reshaper python-bidi
 import arabic_reshaper
 from bidi.algorithm import get_display
 
